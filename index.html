@@ -7,188 +7,100 @@
     <style>
         /* Make the app fill the entire screen */
         html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Hide scrollbars */
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #111827;
-            color: #D1D5DB;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 16px;
-            box-sizing: border-box;
-            text-align: center;
+            background-color: #111827; color: #D1D5DB;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 16px; box-sizing: border-box; text-align: center;
         }
         .ui-container {
-            width: 100%;
-            max-width: 800px;
-            background-color: #1F2937;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            flex-shrink: 0; /* Prevent UI from shrinking too much */
+            width: 100%; max-width: 800px; background-color: #1F2937;
+            padding: 16px; border-radius: 12px; margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-shrink: 0;
             transition: all 0.3s ease;
         }
         textarea {
-            width: 100%;
-            height: 80px;
-            padding: 12px;
-            font-family: monospace;
-            font-size: 1rem;
-            background-color: #374151;
-            border: 1px solid #4B5563;
-            border-radius: 6px;
-            color: #F9FAFB;
-            box-sizing: border-box;
-            resize: vertical;
-            margin-bottom: 12px;
+            width: 100%; height: 100px; padding: 12px; font-family: monospace; font-size: 1rem;
+            background-color: #374151; border: 1px solid #4B5563; border-radius: 6px; color: #F9FAFB;
+            box-sizing: border-box; resize: vertical; margin-bottom: 12px;
         }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+        .button-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
         button {
-            padding: 10px 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #F9FAFB;
-            background-color: #4B5563;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            padding: 10px 20px; font-size: 0.9rem; font-weight: bold; color: #F9FAFB;
+            background-color: #4B5563; border: none; border-radius: 6px; cursor: pointer;
             transition: background-color 0.2s ease-in-out;
         }
-        button:hover {
-            background-color: #6B7280;
-        }
+        button:hover { background-color: #6B7280; }
         canvas {
-            background-color: #1F2937;
-            border: 2px dashed #4B5563;
-            border-radius: 12px;
-            width: 100%;
-            height: 100%;
-            cursor: grab;
-            touch-action: none;
-            transition: border 0.3s ease;
+            background-color: #1F2937; border: 2px dashed #4B5563; border-radius: 12px;
+            width: 100%; height: 100%; cursor: grab; touch-action: none; transition: border 0.3s ease;
         }
-        /* Styles for Presentation Mode */
-        .hidden {
-            display: none !important;
-        }
-        body.presentation-mode .ui-container {
-            padding: 8px;
-            margin-bottom: 8px;
-        }
+        /* Presentation Mode */
+        .hidden { display: none !important; }
+        body.presentation-mode .ui-container { padding: 8px; margin-bottom: 8px; }
         body.presentation-mode .ui-container h1,
         body.presentation-mode .ui-container p,
         body.presentation-mode .ui-container textarea,
         body.presentation-mode .ui-container #generate-btn,
-        body.presentation-mode .ui-container #start-slideshow-btn {
-            display: none;
-        }
-        body.presentation-mode #tileCanvas {
-            border: none;
-            border-radius: 0;
-        }
+        body.presentation-mode .ui-container #start-slideshow-btn { display: none; }
+        body.presentation-mode #tileCanvas { border: none; border-radius: 0; }
         #presentation-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none; /* Allow clicks to pass through to canvas unless on a button */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
         }
         #presentation-overlay button {
-            pointer-events: auto; /* Buttons are clickable */
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 2rem;
-            background-color: rgba(0,0,0,0.4);
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            pointer-events: auto; position: absolute; top: 50%; transform: translateY(-50%);
+            font-size: 2rem; background-color: rgba(0,0,0,0.4); border-radius: 50%;
+            width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;
             border: 1px solid #6B7280;
         }
         #prev-slide-btn { left: 20px; }
         #next-slide-btn { right: 20px; }
         #exit-slideshow-btn {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            top: auto !important;           /* override overlay's `top:50%` */
-            left: auto !important;
-            transform: none !important;     /* override overlay's translateY(-50%) */
-            width: 44px;
-            height: 44px;
-            font-size: 1.5rem;
-            border-radius: 50%;
-            padding: 0;
-            line-height: 1;
-            z-index: 11;                    /* ensure above canvas/arrows if needed */
+            position: absolute; bottom: 20px; right: 20px; top: auto !important; left: auto !important;
+            transform: none !important; width: 44px; height: 44px; font-size: 1.5rem;
+            border-radius: 50%; padding: 0; line-height: 1; z-index: 11;
         }
 
         /* Legend modal */
         #legend-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            display: none; align-items: center; justify-content: center; z-index: 20;
         }
         #legend-card {
-            background: #1F2937;
-            color: #E5E7EB;
-            width: min(720px, 92vw);
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-            padding: 20px;
-            text-align: left;
-            border: 1px solid #374151;
+            background: #1F2937; color: #E5E7EB; width: min(720px, 92vw);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            padding: 20px; text-align: left; border: 1px solid #374151;
         }
         #legend-card h2 { margin: 0 0 8px 0; color: #F9FAFB; }
-        #legend-card code {
-            background: #111827;
-            padding: 2px 6px;
-            border-radius: 6px;
-        }
+        #legend-card code { background: #111827; padding: 2px 6px; border-radius: 6px; }
         #legend-close {
-            float: right;
-            background: #374151;
-            border: 1px solid #4B5563;
-            border-radius: 6px;
-            padding: 6px 10px;
-            cursor: pointer;
+            float: right; background: #374151; border: 1px solid #4B5563;
+            border-radius: 6px; padding: 6px 10px; cursor: pointer;
         }
-        #legend-list {
-            margin: 12px 0 0 0;
-            line-height: 1.6;
-        }
+        #legend-list { margin: 12px 0 0 0; line-height: 1.6; }
     </style>
 </head>
 <body>
-    
     <div class="ui-container">
         <h1>Wilson Tile Generator</h1>
-        <p>Use hyphens for affixes (un-). Use | for syllables (|syl).</p>
-        <textarea id="word-input" placeholder="Example:
+        <p>
+            Use hyphens for affixes (<code>un-</code>, <code>-ing</code>). Use <code>|</code> inside a word to mark syllable bars
+            and block digraphs (<code>up|hill</code>). Use backslash to escape the next letter (<code>up\hill</code>).
+            Use brackets to force literal letters (<code>up[h]ill</code>). Use <code>|syl</code> as a standalone syllable label tile.
+        </p>
+        <textarea id="word-input" placeholder="Examples:
 un- pack -ing
 |syl |la |ble
-super"></textarea>
+uphill
+up|hill
+up\hill
+up[h]ill
+bag -s
+wish -es"></textarea>
         <div class="button-group">
             <button id="generate-btn">Generate Tiles</button>
             <button id="draw-mode-btn">Toggle Draw</button>
@@ -197,7 +109,7 @@ super"></textarea>
             <button id="download-all-btn">Download All PNGs</button>
             <button id="save-project-btn">Save Show (.wrs.json)</button>
             <button id="open-project-btn">Open Show</button>
-            <button id="export-html-btn">Export Self‑Contained HTML</button>
+            <button id="export-html-btn">Export Self-Contained HTML</button>
             <button id="legend-btn">Overrides Legend</button>
             <input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none">
         </div>
@@ -208,7 +120,7 @@ super"></textarea>
     <div id="presentation-overlay" class="hidden">
         <button id="prev-slide-btn">&#8249;</button>
         <button id="next-slide-btn">&#8250;</button>
-        <button id="exit-slideshow-btn">&times;</button> <!-- Replaced text with "X" symbol -->
+        <button id="exit-slideshow-btn">&times;</button>
     </div>
 
     <div id="legend-modal" role="dialog" aria-modal="true" aria-labelledby="legend-title">
@@ -216,14 +128,22 @@ super"></textarea>
         <button id="legend-close" aria-label="Close legend">Close</button>
         <h2 id="legend-title">Overrides &amp; Formatting Legend</h2>
         <div id="legend-list">
+          <p><strong>Digraph overrides (to stop wrong digraphs):</strong></p>
+          <ul>
+            <li><code>up|hill</code> &rarr; <em>|</em> splits syllables and blocks digraphs across the bar</li>
+            <li><code>up\hill</code> &rarr; <em>\</em> escapes the next letter (prevents <code>ph</code>)</li>
+            <li><code>up[h]ill</code> &rarr; letters inside <code>[ ]</code> are literal (no digraphing)</li>
+          </ul>
+
           <p><strong>Force a tile’s type:</strong> <code>[text:type]</code></p>
           <ul>
-            <li><code>[ph:digraph]</code> → force digraph</li>
-            <li><code>[y:vowel]</code> → treat “y” as a vowel</li>
-            <li><code>[ed:suffix]</code> → suffix tile</li>
-            <li><code>[ar:r_controlled]</code> → r-controlled vowel</li>
-            <li><code>[ank:welded]</code> → welded sound</li>
+            <li><code>[ph:digraph]</code> &rarr; force digraph</li>
+            <li><code>[y:vowel]</code> &rarr; treat “y” as a vowel</li>
+            <li><code>[ed:suffix]</code> &rarr; suffix tile</li>
+            <li><code>[ar:r_controlled]</code> &rarr; r-controlled vowel</li>
+            <li><code>[ank:welded]</code> &rarr; welded sound</li>
           </ul>
+
           <p><strong>Single-tile override (no type):</strong> <code>[ank]</code></p>
           <p><strong>Affixes:</strong> prefix <code>re-</code> &nbsp; suffix <code>-ing</code></p>
           <p><strong>Syllable label:</strong> <code>|syl</code></p>
@@ -237,7 +157,6 @@ super"></textarea>
         const canvas = document.getElementById('tileCanvas');
         const ctx = canvas.getContext('2d');
         const wordInput = document.getElementById('word-input');
-        const uiContainer = document.querySelector('.ui-container');
         const presentationOverlay = document.getElementById('presentation-overlay');
 
         // --- CONFIGURATION & STATE ---
@@ -251,26 +170,22 @@ super"></textarea>
 
         const config = {
             lexicon: {
-                prefixes: ["un", "dis", "in", "im", "il", "ir", "mis", "non", "de", "pre", "re", "sub", "super", "trans", "inter", "mid", "fore", "uni", "bi", "tri"],
-                suffixes: ["s", "es", "er", "or", "ness", "ment", "tion", "sion", "ist", "ing", "ed", "en", "ize", "ful", "less", "able", "ible", "y", "ly", "ous", "ish", "est"],
-                digraphs: ["sh", "ch", "th", "wh", "ck", "ph"], trigraphs: ["tch", "dge"],
-                r_controlled: ["ar", "or", "er", "ir", "ur"],
-                welded: ["all", "am", "an", "ang", "ing", "ong", "ung", "ank", "ink", "onk", "unk"],
-                vowel_team: ["ai", "ay", "ea", "ee", "ey", "ie", "oi", "oy", "oa", "oe", "oo", "ow", "ou", "ue", "ui", "ew", "au", "aw"],
-                vowels: ["a", "e", "i", "o", "u"]
+                prefixes: ["un","dis","in","im","il","ir","mis","non","de","pre","re","sub","super","trans","inter","mid","fore","uni","bi","tri"],
+                suffixes: ["s","es","er","or","ness","ment","tion","sion","ist","ing","ed","en","ize","ful","less","able","ible","y","ly","ous","ish","est"],
+                digraphs: ["sh","ch","th","wh","ck","ph"],
+                trigraphs: ["tch","dge"],
+                r_controlled: ["ar","or","er","ir","ur"],
+                welded: ["all","am","an","ang","ing","ong","ung","ank","ink","onk","unk"],
+                vowel_team: ["ai","ay","ea","ee","ey","ie","oi","oy","oa","oe","oo","ow","ou","ue","ui","ew","au","aw"],
+                vowels: ["a","e","i","o","u"]
             }
         };
 
         let tiles = [];
-        let isDragging = false;
-        let selectedTile = null;
-        let offsetX = 0;
-        let offsetY = 0;
-        
-        let isDrawModeActive = false;
-        let isCurrentlyDrawing = false;
+        let isDragging = false, selectedTile = null, offsetX = 0, offsetY = 0;
+        let isDrawModeActive = false, isCurrentlyDrawing = false;
         let editorLines = [];
-        let presentationDrawings = {}; // Holds drawings for each slide
+        let presentationDrawings = {}; // per-slide drawings
 
         // Slideshow State
         let isInPresentationMode = false;
@@ -281,256 +196,184 @@ super"></textarea>
         function generateEditorView() {
             const input = wordInput.value;
             tiles = [];
-            const words = input.split(/[\n,]/).map(word => word.trim()).filter(word => word.length > 0);
+            const words = input.split(/[\n,]/).map(w => w.trim()).filter(Boolean);
             let currentY = 20;
-            const PADDING = 20;
+            const PADDING = 20, GAP = 14;
+            const TILE_WIDTH_STANDARD = 112, TILE_HEIGHT_STANDARD = 96;
+            const TILE_WIDTH_AFFIX = Math.round(TILE_WIDTH_STANDARD * 1.6), TILE_HEIGHT_AFFIX = Math.round(TILE_HEIGHT_STANDARD * 1.25);
+            const TILE_WIDTH_SYLLABLE = Math.round(TILE_WIDTH_STANDARD * 2.2), TILE_HEIGHT_SYLLABLE = Math.round(TILE_HEIGHT_STANDARD * 2);
+
             words.forEach(word => {
                 const graphemeData = tokenizeGraphemes(word);
-                // --- updated tile sizing constants ---
-                const TILE_WIDTH_STANDARD = 112, TILE_HEIGHT_STANDARD = 96; // wider aspect
-                const TILE_WIDTH_AFFIX = Math.round(TILE_WIDTH_STANDARD * 1.6), TILE_HEIGHT_AFFIX = Math.round(TILE_HEIGHT_STANDARD * 1.25);
-                const TILE_WIDTH_SYLLABLE = Math.round(TILE_WIDTH_STANDARD * 2.2), TILE_HEIGHT_SYLLABLE = Math.round(TILE_HEIGHT_STANDARD * 2);
-                const GAP = 14;
+
                 let totalWidth = 0;
-                graphemeData.forEach((gData, index) => {
-                    let width;
-                    switch (gData.type) {
-                        case 'prefix': case 'suffix': width = TILE_WIDTH_AFFIX; break;
-                        case 'syllable': width = TILE_WIDTH_SYLLABLE; break;
-                        default: width = TILE_WIDTH_STANDARD;
-                    }
-                    totalWidth += width;
-                    if (index < graphemeData.length - 1) { totalWidth += GAP; }
+                graphemeData.forEach((g, i) => {
+                    let w = TILE_WIDTH_STANDARD;
+                    if (g.type === 'prefix' || g.type === 'suffix') w = TILE_WIDTH_AFFIX;
+                    else if (g.type === 'syllable') w = TILE_WIDTH_SYLLABLE;
+                    totalWidth += w + (i < graphemeData.length - 1 ? GAP : 0);
                 });
+
                 const availableWidth = Math.max(0, canvas.width - (PADDING * 2));
                 const scaleFactor = Math.min(1, availableWidth / totalWidth);
-                let currentX = PADDING;
-                const maxRowHeight = graphemeData.reduce((max, gData) => {
-                    let height;
-                    switch (gData.type) {
-                        case 'prefix': case 'suffix': height = TILE_HEIGHT_AFFIX; break;
-                        case 'syllable': height = TILE_HEIGHT_SYLLABLE; break;
-                        default: height = TILE_HEIGHT_STANDARD;
-                    }
-                    return Math.max(max, height);
+
+                const maxRowHeight = graphemeData.reduce((max, g) => {
+                    let h = TILE_HEIGHT_STANDARD;
+                    if (g.type === 'prefix' || g.type === 'suffix') h = TILE_HEIGHT_AFFIX;
+                    else if (g.type === 'syllable') h = TILE_HEIGHT_SYLLABLE;
+                    return Math.max(max, h);
                 }, TILE_HEIGHT_STANDARD) * scaleFactor;
-                graphemeData.forEach(gData => {
-                    let tileWidth, tileHeight;
-                    switch (gData.type) {
-                        case 'prefix': case 'suffix':
-                            tileWidth = TILE_WIDTH_AFFIX * scaleFactor;
-                            tileHeight = TILE_HEIGHT_AFFIX * scaleFactor;
-                            break;
-                        case 'syllable':
-                            tileWidth = TILE_WIDTH_SYLLABLE * scaleFactor;
-                            tileHeight = TILE_HEIGHT_SYLLABLE * scaleFactor;
-                            break;
-                        default:
-                            tileWidth = TILE_WIDTH_STANDARD * scaleFactor;
-                            tileHeight = TILE_HEIGHT_STANDARD * scaleFactor;
-                    }
-                    const tileY = currentY + (maxRowHeight - tileHeight) / 2;
-                    const newTile = { ...gData, x: currentX, y: tileY, width: tileWidth, height: tileHeight, scale: scaleFactor };
-                    tiles.push(newTile);
-                    currentX += tileWidth + GAP;
+
+                let currentX = PADDING;
+                const tileYBase = currentY;
+
+                graphemeData.forEach(g => {
+                    let w = TILE_WIDTH_STANDARD, h = TILE_HEIGHT_STANDARD;
+                    if (g.type === 'prefix' || g.type === 'suffix') { w = TILE_WIDTH_AFFIX; h = TILE_HEIGHT_AFFIX; }
+                    else if (g.type === 'syllable') { w = TILE_WIDTH_SYLLABLE; h = TILE_HEIGHT_SYLLABLE; }
+
+                    const tile = {
+                        ...g,
+                        x: currentX,
+                        y: tileYBase + (maxRowHeight - h * scaleFactor) / 2,
+                        width: w * scaleFactor,
+                        height: h * scaleFactor,
+                        scale: scaleFactor
+                    };
+                    tiles.push(tile);
+                    currentX += (w * scaleFactor) + GAP;
                 });
+
                 currentY += maxRowHeight + GAP;
             });
+
             render();
         }
 
         // --- SLIDESHOW LOGIC ---
         function startSlideshow() {
-            presentationWords = wordInput.value.split(/[\n,]/).map(word => word.trim()).filter(word => word.length > 0);
-            if (presentationWords.length === 0) {
-                alert("Please enter some words to start the slideshow.");
-                return;
-            }
+            presentationWords = wordInput.value.split(/[\n,]/).map(w => w.trim()).filter(Boolean);
+            if (!presentationWords.length) { alert("Please enter some words to start the slideshow."); return; }
             isInPresentationMode = true;
-            presentationDrawings = {}; // Reset drawings for the new show
+            presentationDrawings = {};
             currentSlideIndex = 0;
             document.body.classList.add('presentation-mode');
             presentationOverlay.classList.remove('hidden');
             drawCurrentSlide();
         }
-
         function exitSlideshow() {
             isInPresentationMode = false;
-            if (isDrawModeActive) { toggleDrawMode(); } // Turn off draw mode when exiting
+            if (isDrawModeActive) toggleDrawMode();
             document.body.classList.remove('presentation-mode');
             presentationOverlay.classList.add('hidden');
-            generateEditorView(); // Go back to stacked view
+            generateEditorView();
         }
-
-        function nextSlide() {
-            if (currentSlideIndex < presentationWords.length - 1) {
-                currentSlideIndex++;
-                drawCurrentSlide();
-            }
-        }
-
-        function prevSlide() {
-            if (currentSlideIndex > 0) {
-                currentSlideIndex--;
-                drawCurrentSlide();
-            }
-        }
+        function nextSlide() { if (currentSlideIndex < presentationWords.length - 1) { currentSlideIndex++; drawCurrentSlide(); } }
+        function prevSlide() { if (currentSlideIndex > 0) { currentSlideIndex--; drawCurrentSlide(); } }
 
         function drawCurrentSlide() {
             const word = presentationWords[currentSlideIndex];
             const graphemeData = tokenizeGraphemes(word);
-            tiles = []; // Clear previous tiles
-            
-            // --- updated tile sizing constants ---
-            const TILE_WIDTH_STANDARD = 112, TILE_HEIGHT_STANDARD = 96;
-            const TILE_WIDTH_AFFIX = Math.round(TILE_WIDTH_STANDARD * 1.6), TILE_HEIGHT_AFFIX = Math.round(TILE_HEIGHT_STANDARD * 1.25);
-            const TILE_WIDTH_SYLLABLE = Math.round(TILE_WIDTH_STANDARD * 2.2), TILE_HEIGHT_SYLLABLE = Math.round(TILE_HEIGHT_STANDARD * 2);
-            const GAP = 14;
-            const PADDING = 20;
+            tiles = [];
+
+            const GAP = 14, PADDING = 20;
+            const W = 112, H = 96;
+            const WA = Math.round(W * 1.6), HA = Math.round(H * 1.25);
+            const WS = Math.round(W * 2.2), HS = Math.round(H * 2);
 
             let totalWidth = 0;
-            graphemeData.forEach((gData, index) => {
-                let width;
-                switch (gData.type) {
-                    case 'prefix': case 'suffix': width = TILE_WIDTH_AFFIX; break;
-                    case 'syllable': width = TILE_WIDTH_SYLLABLE; break;
-                    default: width = TILE_WIDTH_STANDARD;
-                }
-                totalWidth += width;
-                if (index < graphemeData.length - 1) { totalWidth += GAP; }
+            graphemeData.forEach((g, i) => {
+                let w = W;
+                if (g.type === 'prefix' || g.type === 'suffix') w = WA;
+                else if (g.type === 'syllable') w = WS;
+                totalWidth += w + (i < graphemeData.length - 1 ? GAP : 0);
             });
 
             const availableWidth = Math.max(0, canvas.width - (PADDING * 2));
             const scaleFactor = Math.min(1, availableWidth / totalWidth);
-            
-            const maxRowHeight = graphemeData.reduce((max, gData) => {
-                let height;
-                switch (gData.type) {
-                    case 'prefix': case 'suffix': height = TILE_HEIGHT_AFFIX; break;
-                    case 'syllable': height = TILE_HEIGHT_SYLLABLE; break;
-                    default: height = TILE_HEIGHT_STANDARD;
-                }
-                return Math.max(max, height);
-            }, TILE_HEIGHT_STANDARD) * scaleFactor;
+
+            const maxRowHeight = graphemeData.reduce((max, g) => {
+                let h = H;
+                if (g.type === 'prefix' || g.type === 'suffix') h = HA;
+                else if (g.type === 'syllable') h = HS;
+                return Math.max(max, h);
+            }, H) * scaleFactor;
 
             let currentX = (canvas.width - (totalWidth * scaleFactor)) / 2;
             let currentY = (canvas.height - maxRowHeight) / 2;
 
-            graphemeData.forEach(gData => {
-                let tileWidth, tileHeight;
-                switch (gData.type) {
-                    case 'prefix': case 'suffix':
-                        tileWidth = TILE_WIDTH_AFFIX * scaleFactor;
-                        tileHeight = TILE_HEIGHT_AFFIX * scaleFactor;
-                        break;
-                    case 'syllable':
-                        tileWidth = TILE_WIDTH_SYLLABLE * scaleFactor;
-                        tileHeight = TILE_HEIGHT_SYLLABLE * scaleFactor;
-                        break;
-                    default:
-                        tileWidth = TILE_WIDTH_STANDARD * scaleFactor;
-                        tileHeight = TILE_HEIGHT_STANDARD * scaleFactor;
-                }
-                const tileY = currentY + (maxRowHeight - tileHeight) / 2;
-                const newTile = { ...gData, x: currentX, y: tileY, width: tileWidth, height: tileHeight, scale: scaleFactor };
-                tiles.push(newTile);
-                currentX += tileWidth + GAP;
+            graphemeData.forEach(g => {
+                let w = W, h = H;
+                if (g.type === 'prefix' || g.type === 'suffix') { w = WA; h = HA; }
+                else if (g.type === 'syllable') { w = WS; h = HS; }
+                const tile = {
+                    ...g,
+                    x: currentX,
+                    y: currentY + (maxRowHeight - h * scaleFactor) / 2,
+                    width: w * scaleFactor,
+                    height: h * scaleFactor,
+                    scale: scaleFactor
+                };
+                tiles.push(tile);
+                currentX += (w * scaleFactor) + GAP;
             });
 
             render();
         }
 
-        // --- DRAWING LOGIC ---
+        // --- DRAWING & RENDER ---
         function drawTile(tile, context) {
             const bgColor = TILE_COLORS[tile.type] || TILE_COLORS['default'];
-            const cornerRadius = 8 * (tile.scale || 1);
+            const r = 8 * (tile.scale || 1);
             context.fillStyle = bgColor;
-            context.beginPath();
-            context.roundRect(tile.x, tile.y, tile.width, tile.height, [cornerRadius]);
-            context.fill();
+            context.beginPath(); context.roundRect(tile.x, tile.y, tile.width, tile.height, [r]); context.fill();
             context.lineWidth = 2 * (tile.scale || 1);
-            if (tile === selectedTile && !isInPresentationMode) {
-                context.strokeStyle = '#38BDF8';
-                context.lineWidth = 4 * (tile.scale || 1);
-            } else {
-                context.strokeStyle = '#000000';
-            }
-            context.beginPath();
-            context.roundRect(tile.x, tile.y, tile.width, tile.height, [cornerRadius]);
-            context.stroke();
-            context.fillStyle = TILE_COLORS.text;
-            
-            let fontSize;
-            switch (tile.type) {
-                case 'prefix': case 'suffix': fontSize = 36; break;
-                case 'syllable': fontSize = 48; break;
-                default: fontSize = 28;
-            }
-            context.font = `bold ${fontSize * (tile.scale || 1)}px "Noto Sans", sans-serif`;
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            const centerX = tile.x + tile.width / 2;
-            const centerY = tile.y + tile.height / 2;
+            context.strokeStyle = (tile === selectedTile && !isInPresentationMode) ? '#38BDF8' : '#000000';
+            context.beginPath(); context.roundRect(tile.x, tile.y, tile.width, tile.height, [r]); context.stroke();
 
-            // Make letters ~20% wider (X) and ~10% taller (Y)
-            context.save();
-            context.translate(centerX, centerY);
-            context.scale(1.2, 1.1);
-            context.fillText(tile.text, 0, 0);
-            context.restore();
+            context.fillStyle = TILE_COLORS.text;
+            let fontSize = 28;
+            if (tile.type === 'prefix' || tile.type === 'suffix') fontSize = 36;
+            else if (tile.type === 'syllable') fontSize = 48;
+
+            context.font = `bold ${fontSize * (tile.scale || 1)}px "Noto Sans", sans-serif`;
+            context.textAlign = 'center'; context.textBaseline = 'middle';
+            const cx = tile.x + tile.width / 2, cy = tile.y + tile.height / 2;
+            context.save(); context.translate(cx, cy); context.scale(1.2, 1.1); context.fillText(tile.text, 0, 0); context.restore();
         }
 
         function drawLines(context, linesToDraw) {
             if (!linesToDraw) return;
-            context.strokeStyle = '#F87171';
-            context.lineWidth = 3;
-            context.lineCap = 'round';
-            context.lineJoin = 'round';
+            context.strokeStyle = '#F87171'; context.lineWidth = 3; context.lineCap = 'round'; context.lineJoin = 'round';
             linesToDraw.forEach(line => {
                 if (line.length < 2) return;
-                context.beginPath();
-                context.moveTo(line[0].x, line[0].y);
-                for (let i = 1; i < line.length; i++) {
-                    context.lineTo(line[i].x, line[i].y);
-                }
+                context.beginPath(); context.moveTo(line[0].x, line[0].y);
+                for (let i = 1; i < line.length; i++) context.lineTo(line[i].x, line[i].y);
                 context.stroke();
             });
         }
 
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const tile of tiles) {
-                drawTile(tile, ctx);
-            }
-            if (isInPresentationMode) {
-                drawLines(ctx, presentationDrawings[currentSlideIndex]);
-            } else {
-                drawLines(ctx, editorLines);
-            }
+            for (const tile of tiles) drawTile(tile, ctx);
+            drawLines(ctx, isInPresentationMode ? presentationDrawings[currentSlideIndex] : editorLines);
         }
-        
-        // --- EVENT HANDLERS ---
+
+        // --- EVENTS ---
         function handleDown(e) {
             e.preventDefault();
             const { x, y } = getEventPos(e);
             if (isDrawModeActive) {
                 isCurrentlyDrawing = true;
-                if (isInPresentationMode) {
-                    if (!presentationDrawings[currentSlideIndex]) {
-                        presentationDrawings[currentSlideIndex] = [];
-                    }
-                    presentationDrawings[currentSlideIndex].push([{ x, y }]);
-                } else {
-                    editorLines.push([{ x, y }]);
-                }
-                return;
+                const bucket = isInPresentationMode ? (presentationDrawings[currentSlideIndex] ||= []) : editorLines;
+                bucket.push([{ x, y }]); return;
             }
-            if (isInPresentationMode) return; // Disable dragging in presentation mode
+            if (isInPresentationMode) return;
             for (let i = tiles.length - 1; i >= 0; i--) {
-                const tile = tiles[i];
-                if (x > tile.x && x < tile.x + tile.width && y > tile.y && y < tile.y + tile.height) {
-                    selectedTile = tile; isDragging = true; canvas.style.cursor = 'grabbing';
-                    offsetX = x - tile.x; offsetY = y - tile.y;
+                const t = tiles[i];
+                if (x > t.x && x < t.x + t.width && y > t.y && y < t.y + t.height) {
+                    selectedTile = t; isDragging = true; canvas.style.cursor = 'grabbing';
+                    offsetX = x - t.x; offsetY = y - t.y;
                     tiles.push(tiles.splice(i, 1)[0]); render(); return;
                 }
             }
@@ -539,48 +382,26 @@ super"></textarea>
             e.preventDefault();
             const { x, y } = getEventPos(e);
             if (isDrawModeActive && isCurrentlyDrawing) {
-                if (isInPresentationMode) {
-                    const currentLines = presentationDrawings[currentSlideIndex];
-                    if (currentLines) currentLines[currentLines.length - 1].push({ x, y });
-                } else {
-                    editorLines[editorLines.length - 1].push({ x, y });
-                }
-                render();
-                return;
+                const bucket = isInPresentationMode ? presentationDrawings[currentSlideIndex] : editorLines;
+                bucket[bucket.length - 1].push({ x, y }); render(); return;
             }
-            if (isDragging) { // Already implies not in presentation mode
-                selectedTile.x = x - offsetX;
-                selectedTile.y = y - offsetY;
-                render();
-            }
+            if (isDragging) { selectedTile.x = x - offsetX; selectedTile.y = y - offsetY; render(); }
         }
         function handleUp(e) {
-            e.preventDefault();
-            isCurrentlyDrawing = false;
-            if (isDragging) {
-                canvas.style.cursor = 'grab'; isDragging = false; selectedTile = null; render();
-            }
+            e.preventDefault(); isCurrentlyDrawing = false;
+            if (isDragging) { canvas.style.cursor = 'grab'; isDragging = false; selectedTile = null; render(); }
         }
         function toggleDrawMode() {
             isDrawModeActive = !isDrawModeActive;
-            const drawBtn = document.getElementById('draw-mode-btn');
-            if (isDrawModeActive) {
-                drawBtn.style.backgroundColor = '#059669'; drawBtn.textContent = 'Draw Mode: ON';
-                canvas.style.cursor = 'crosshair';
-            } else {
-                drawBtn.style.backgroundColor = '#4B5563'; drawBtn.textContent = 'Toggle Draw';
-                canvas.style.cursor = isInPresentationMode ? 'default' : 'grab';
-            }
+            const btn = document.getElementById('draw-mode-btn');
+            if (isDrawModeActive) { btn.style.backgroundColor = '#059669'; btn.textContent = 'Draw Mode: ON'; canvas.style.cursor = 'crosshair'; }
+            else { btn.style.backgroundColor = '#4B5563'; btn.textContent = 'Toggle Draw'; canvas.style.cursor = isInPresentationMode ? 'default' : 'grab'; }
         }
         function clearDrawings() {
-            if (isInPresentationMode) {
-                presentationDrawings[currentSlideIndex] = [];
-            } else {
-                editorLines = [];
-            }
+            if (isInPresentationMode) presentationDrawings[currentSlideIndex] = [];
+            else editorLines = [];
             render();
         }
-
         function handleKeyDown(e) {
             if (!isInPresentationMode) return;
             if (e.key === 'ArrowRight') nextSlide();
@@ -588,29 +409,25 @@ super"></textarea>
             else if (e.key === 'Escape') exitSlideshow();
         }
 
-        // --- EXPORT HELPERS (self-contained; no external libs) ---
+        // --- EXPORT HELPERS ---
         function generateImageForWord(word) {
             return new Promise(resolve => {
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
-                const PADDING = 20;
-                // updated sizing constants
-                const W = 112, H = 96, GAP = 14;
-                const TILE_WIDTH_AFFIX = Math.round(W * 1.6), TILE_HEIGHT_AFFIX = Math.round(H * 1.25);
-                const TILE_WIDTH_SYLLABLE = Math.round(W * 2.2), TILE_HEIGHT_SYLLABLE = Math.round(H * 2);
+                const PADDING = 20, GAP = 14;
+                const W = 112, H = 96, WA = Math.round(W * 1.6), HA = Math.round(H * 1.25), WS = Math.round(W * 2.2), HS = Math.round(H * 2);
 
                 const graphemeData = tokenizeGraphemes(word);
                 let totalWidth = 0, maxRowHeight = H;
-                graphemeData.forEach((gData, index) => {
+                graphemeData.forEach((g, i) => {
                     let w = W, h = H;
-                    if (gData.type === 'prefix' || gData.type === 'suffix') { w = TILE_WIDTH_AFFIX; h = TILE_HEIGHT_AFFIX; }
-                    else if (gData.type === 'syllable') { w = TILE_WIDTH_SYLLABLE; h = TILE_HEIGHT_SYLLABLE; }
-                    totalWidth += w;
-                    if (index < graphemeData.length - 1) totalWidth += GAP;
+                    if (g.type === 'prefix' || g.type === 'suffix') { w = WA; h = HA; }
+                    else if (g.type === 'syllable') { w = WS; h = HS; }
+                    totalWidth += w + (i < graphemeData.length - 1 ? GAP : 0);
                     maxRowHeight = Math.max(maxRowHeight, h);
                 });
 
-                const dpr = 2; // export crisp
+                const dpr = 2;
                 tempCanvas.width = (totalWidth + PADDING * 2) * dpr;
                 tempCanvas.height = (maxRowHeight + PADDING * 2) * dpr;
                 tempCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -618,11 +435,11 @@ super"></textarea>
                 tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
                 let x = PADDING;
-                graphemeData.forEach(gData => {
+                graphemeData.forEach(g => {
                     let w = W, h = H;
-                    if (gData.type === 'prefix' || gData.type === 'suffix') { w = TILE_WIDTH_AFFIX; h = TILE_HEIGHT_AFFIX; }
-                    else if (gData.type === 'syllable') { w = TILE_WIDTH_SYLLABLE; h = TILE_HEIGHT_SYLLABLE; }
-                    const tile = { ...gData, x, y: PADDING + (maxRowHeight - h) / 2, width: w, height: h, scale: 1 };
+                    if (g.type === 'prefix' || g.type === 'suffix') { w = WA; h = HA; }
+                    else if (g.type === 'syllable') { w = WS; h = HS; }
+                    const tile = { ...g, x, y: PADDING + (maxRowHeight - h) / 2, width: w, height: h, scale: 1 };
                     drawTile(tile, tempCtx);
                     x += w + GAP;
                 });
@@ -640,46 +457,30 @@ super"></textarea>
                 const safe = word.toLowerCase().trim().replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '');
                 a.href = URL.createObjectURL(blob);
                 a.download = `${safe || 'slide'}.png`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                document.body.appendChild(a); a.click(); a.remove();
             }
         }
 
-        // --- PROJECT SAVE/OPEN (Option 2) ---
-        function getWordsArray() {
-            return wordInput.value.split(/[\n,]/).map(w => w.trim()).filter(Boolean);
-        }
-        function getProjectData() {
-            return {
-                version: 1,
-                title: document.title || 'Wilson Tiles Show',
-                words: getWordsArray(),
-                drawings: presentationDrawings  // per-slide drawings (arrays of point arrays)
-            };
-        }
+        // --- PROJECT SAVE/OPEN ---
+        function getWordsArray() { return wordInput.value.split(/[\n,]/).map(w => w.trim()).filter(Boolean); }
+        function getProjectData() { return { version: 1, title: document.title || 'Wilson Tiles Show', words: getWordsArray(), drawings: presentationDrawings }; }
         function loadProject(obj) {
             if (!obj || !Array.isArray(obj.words)) { alert('Invalid project file.'); return; }
             wordInput.value = obj.words.join('\n');
             presentationDrawings = obj.drawings && typeof obj.drawings === 'object' ? obj.drawings : {};
             currentSlideIndex = 0;
-            if (isInPresentationMode) { drawCurrentSlide(); } else { generateEditorView(); }
+            if (isInPresentationMode) drawCurrentSlide(); else generateEditorView();
         }
         function saveProject() {
             const data = getProjectData();
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             const safe = (data.title || 'wilson_show').toLowerCase().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${safe || 'wilson_show'}.wrs.json`;
-            a.click();
+            a.href = URL.createObjectURL(blob); a.download = `${safe || 'wilson_show'}.wrs.json`; a.click();
         }
         function openProjectFromFile(file) {
             const reader = new FileReader();
-            reader.onload = () => {
-                try { loadProject(JSON.parse(reader.result)); }
-                catch { alert('Could not read project file.'); }
-            };
+            reader.onload = () => { try { loadProject(JSON.parse(reader.result)); } catch { alert('Could not read project file.'); } };
             reader.readAsText(file);
         }
 
@@ -687,166 +488,157 @@ super"></textarea>
         function exportSelfContainedHtml() {
             const data = getProjectData();
             const css = document.querySelector('style').textContent;
-            // grab current script content (this file has a single main <script>)
             const mainScript = Array.from(document.querySelectorAll('script')).map(s => s.textContent).join('\n\n');
             const savedTag = `<script>window.SAVED_SHOW = ${JSON.stringify(data)};<\\/script>`;
             const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${(data.title || 'Wilson Tile Generator & Slideshow').replace(/</g,'&lt;')}</title>
-    <style>${css}</style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${(data.title || 'Wilson Tile Generator & Slideshow').replace(/</g,'&lt;')}</title>
+<style>${css}</style>
 </head>
 <body>
-    <div class="ui-container">
-        <h1>Wilson Tile Generator</h1>
-        <p>Use hyphens for affixes (un-). Use | for syllables (|syl).</p>
-        <textarea id="word-input"></textarea>
-        <div class="button-group">
-            <button id="generate-btn">Generate Tiles</button>
-            <button id="draw-mode-btn">Toggle Draw</button>
-            <button id="clear-drawings-btn">Clear Drawings</button>
-            <button id="start-slideshow-btn">Start Slideshow</button>
-            <button id="download-all-btn">Download All PNGs</button>
-            <button id="save-project-btn">Save Show (.wrs.json)</button>
-            <button id="open-project-btn">Open Show</button>
-            <button id="export-html-btn">Export Self‑Contained HTML</button>
-            <input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none">
-        </div>
-    </div>
-    <canvas id="tileCanvas"></canvas>
-    <div id="presentation-overlay" class="hidden">
-        <button id="prev-slide-btn">&#8249;</button>
-        <button id="next-slide-btn">&#8250;</button>
-        <button id="exit-slideshow-btn">&times;</button>
-    </div>
-    ${savedTag}
-    <script>${mainScript}<\\/script>
-    <script>
-    // Boot: if SAVED_SHOW present, load it and render immediately
-    (function(){
-        if (window.SAVED_SHOW) {
-            const data = window.SAVED_SHOW;
-            document.addEventListener('DOMContentLoaded', function(){
-                const ta = document.getElementById('word-input');
-                if (ta && Array.isArray(data.words)) ta.value = data.words.join('\\n');
-                if (typeof loadProject === 'function') { loadProject(data); }
-            });
-        }
-    })();
-    <\\/script>
-</body>
-</html>`;
+<div class="ui-container">
+<h1>Wilson Tile Generator</h1>
+<p>Use hyphens for affixes (un-, -ing). Use | inside a word to mark syllable bars and block digraphs (up|hill). Use \\ to escape the next letter (up\\hill). Use [ ] to force literal letters (up[h]ill). Use |syl as a standalone syllable label tile.</p>
+<textarea id="word-input"></textarea>
+<div class="button-group">
+<button id="generate-btn">Generate Tiles</button>
+<button id="draw-mode-btn">Toggle Draw</button>
+<button id="clear-drawings-btn">Clear Drawings</button>
+<button id="start-slideshow-btn">Start Slideshow</button>
+<button id="download-all-btn">Download All PNGs</button>
+<button id="save-project-btn">Save Show (.wrs.json)</button>
+<button id="open-project-btn">Open Show</button>
+<button id="export-html-btn">Export Self-Contained HTML</button>
+<input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none">
+</div>
+</div>
+<canvas id="tileCanvas"></canvas>
+<div id="presentation-overlay" class="hidden">
+<button id="prev-slide-btn">&#8249;</button>
+<button id="next-slide-btn">&#8250;</button>
+<button id="exit-slideshow-btn">&times;</button>
+</div>
+${savedTag}
+<script>${mainScript}<\\/script>
+<script>(function(){ if(window.SAVED_SHOW){ const d=window.SAVED_SHOW; document.addEventListener('DOMContentLoaded', function(){ const ta=document.getElementById('word-input'); if(ta&&Array.isArray(d.words)) ta.value=d.words.join('\\n'); if(typeof loadProject==='function'){ loadProject(d); } }); } })();<\/script>
+</body></html>`;
             const blob = new Blob([html], { type: 'text/html' });
             const a = document.createElement('a');
             const safe = (data.title || 'wilson_show').toLowerCase().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${safe || 'wilson_show'}.wrs.html`;
-            a.click();
+            a.href = URL.createObjectURL(blob); a.download = `${safe || 'wilson_show'}.wrs.html`; a.click();
         }
 
-        // --- UTILITY FUNCTIONS ---
+        // --- UTILS ---
         function getEventPos(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-            // Calculate the mouse position relative to the canvas element
-            const mouseX = clientX - rect.left;
-            const mouseY = clientY - rect.top;
-
-            // Adjust for the scaling between the canvas's display size and its drawing buffer size.
-            // This fixes the bug where the drawing appears offset from the cursor.
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-
-            return {
-                x: mouseX * scaleX,
-                y: mouseY * scaleY
-            };
+            const mouseX = clientX - rect.left, mouseY = clientY - rect.top;
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+            return { x: mouseX * scaleX, y: mouseY * scaleY };
         }
 
+        // --- TOKENIZER with overrides |, \, [ ... ] ---
         function tokenizeGraphemes(word) {
-            const overrideMatch = word.match(/\[(.*?)\]/);
-            if (overrideMatch) {
-                // Supports [text] and [text:type]
-                const raw = overrideMatch[1].replace(/\+/g, '').trim();
-                const parts = raw.split(':').map(s => s.trim());
-                const content = parts[0] || '';
-                const forced = (parts[1] || '').toLowerCase();
-                const allowed = new Set(['consonant','vowel','digraph','trigraph','welded','r_controlled','vowel_team','prefix','suffix','syllable']);
-                const isForced = allowed.has(forced);
-                const type = isForced ? forced : getGraphemeType(content);
-                return [{ text: content, type, forced: isForced }];
-            }
-            
             const finalTokens = [];
-            const parts = word.split(/\s+/).filter(p => p.length > 0);
+            const parts = String(word).split(/\s+/).filter(p => p.length > 0);
+
+            const patterns = [
+                ...config.lexicon.welded,
+                ...config.lexicon.trigraphs,
+                ...config.lexicon.digraphs,
+                ...config.lexicon.vowel_team,
+                ...config.lexicon.r_controlled,
+                ...config.lexicon.vowels
+            ].sort((a, b) => b.length - a.length);
+
+            function pushCharAsTile(ch) {
+                finalTokens.push({ text: ch, type: getGraphemeType(ch), forced: true });
+            }
+
+            function scanSegment(seg) {
+                const letters = [...seg];
+                for (let i = 0; i < letters.length; i++) {
+                    let ch = letters[i];
+
+                    // Escape: \x => literal x (no digraph)
+                    if (ch === "\\" && i + 1 < letters.length) {
+                        pushCharAsTile(letters[++i]); // skip and emit next char literally
+                        continue;
+                    }
+
+                    // Bracket literal: [ ... ] => emit each char literally
+                    if (ch === "[") {
+                        let j = i + 1, buf = "";
+                        while (j < letters.length && letters[j] !== "]") buf += letters[j++];
+                        if (j < letters.length && letters[j] === "]") {
+                            for (const c of buf) pushCharAsTile(c);
+                            i = j; // jump past ]
+                            continue;
+                        }
+                        // fall through if no closing ]
+                    }
+
+                    // Normal pattern match (within this segment only)
+                    let matched = false;
+                    const remainder = letters.slice(i).join('').toLowerCase();
+                    for (const pat of patterns) {
+                        if (remainder.startsWith(pat)) {
+                            const raw = letters.slice(i, i + pat.length).join('');
+                            finalTokens.push({ text: raw, type: getGraphemeType(pat) });
+                            i += pat.length - 1; // -1 because loop will i++
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched) {
+                        // default single char
+                        pushCharAsTile(ch);
+                    }
+                }
+            }
 
             parts.forEach(part => {
                 if (part.startsWith('|') && part.length > 1) {
+                    // Standalone syllable label tile: "|syl"
                     finalTokens.push({ text: part.substring(1), type: 'syllable' });
                 } else if (part.startsWith('-') && part.length > 1) {
                     finalTokens.push({ text: part, type: 'suffix' });
                 } else if (part.endsWith('-') && part.length > 1) {
                     finalTokens.push({ text: part, type: 'prefix' });
                 } else {
-                    let remainingBase = part;
-                    let remainingLower = remainingBase.toLowerCase();
-                    const patterns = [ ...config.lexicon.welded, ...config.lexicon.trigraphs, ...config.lexicon.digraphs, ...config.lexicon.vowel_team, ...config.lexicon.r_controlled, ...config.lexicon.vowels ].sort((a, b) => b.length - a.length);
-                    while (remainingBase.length > 0) {
-                        let matched = false;
-                        for (const pattern of patterns) {
-                            if (remainingLower.startsWith(pattern)) {
-                                finalTokens.push({ text: remainingBase.slice(0, pattern.length), type: getGraphemeType(pattern) });
-                                remainingBase = remainingBase.slice(pattern.length);
-                                remainingLower = remainingLower.slice(pattern.length);
-                                matched = true;
-                                break;
-                            }
-                        }
-                        if (!matched) {
-                            finalTokens.push({ text: remainingBase.charAt(0), type: 'consonant' });
-                            remainingBase = remainingBase.slice(1);
-                            remainingLower = remainingLower.slice(1);
-                        }
-                    }
+                    // Allow in-word syllable bars to block digraphs: split on |
+                    const segments = part.split('|');
+                    segments.forEach((seg, idx) => {
+                        if (seg) scanSegment(seg);
+                        // We do not emit a visible tile for the in-word bar; it just blocks digraphs.
+                        // (Use a separate "|syl" token if you want a visible/grey syllable tile.)
+                    });
+                    adjustYTypes(finalTokens);
                 }
-                // After building tokens for this part, adjust single 'y' classification contextually
-                adjustYTypes(finalTokens);
             });
 
             return finalTokens;
         }
 
         function adjustYTypes(tokens) {
-            // Treat single-letter 'y' as a vowel when it does NOT precede a vowel sound,
-            // and as a consonant when it does (e.g., 'y' in "yes", "yellow", "yodel").
-            // Do not change tokens that were forced via [text:type].
             for (let i = 0; i < tokens.length; i++) {
                 const t = tokens[i];
                 if (t && !t.forced && typeof t.text === 'string' && t.text.length === 1 && t.text.toLowerCase() === 'y') {
-                    // Look ahead to the next token to infer onset vs nucleus
                     const next = tokens[i + 1];
                     const nextText = next && typeof next.text === 'string' ? next.text : '';
                     const nextType = next ? next.type : '';
                     const nextStartsWithVowel = /^[aeiou]/i.test(nextText);
                     const nextIsVowelish = nextType === 'vowel' || nextType === 'vowel_team' || nextType === 'r_controlled' || nextStartsWithVowel;
-
-                    if (nextIsVowelish) {
-                        // 'y' before a vowel sound functions as consonant (/y/ as in "yes")
-                        t.type = 'consonant';
-                    } else {
-                        // Word-final or before consonant: acts as vowel (e.g., "cry", "gym", "myth", "rhythm")
-                        t.type = 'vowel';
-                    }
+                    t.type = nextIsVowelish ? 'consonant' : 'vowel';
                 }
             }
         }
 
         function getGraphemeType(grapheme) {
-            const g = grapheme.replace(/-/g, '').toLowerCase();
+            const g = String(grapheme).replace(/-/g, '').toLowerCase();
             if (config.lexicon.welded.includes(g)) return 'welded';
             if (config.lexicon.trigraphs.includes(g)) return 'trigraph';
             if (config.lexicon.digraphs.includes(g)) return 'digraph';
@@ -856,15 +648,10 @@ super"></textarea>
             return 'consonant';
         }
 
-        // --- INITIALIZATION ---
+        // --- INIT ---
         function resizeAndDraw() {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
-            if (isInPresentationMode) {
-                drawCurrentSlide();
-            } else {
-                generateEditorView();
-            }
+            canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
+            if (isInPresentationMode) drawCurrentSlide(); else generateEditorView();
         }
 
         window.onload = function() {
@@ -872,14 +659,11 @@ super"></textarea>
             document.getElementById('draw-mode-btn').addEventListener('click', toggleDrawMode);
             document.getElementById('clear-drawings-btn').addEventListener('click', clearDrawings);
             document.getElementById('start-slideshow-btn').addEventListener('click', startSlideshow);
-
             document.getElementById('download-all-btn').addEventListener('click', downloadAllPNGs);
             document.getElementById('save-project-btn').addEventListener('click', saveProject);
             document.getElementById('open-project-btn').addEventListener('click', () => document.getElementById('open-project-file').click());
             document.getElementById('open-project-file').addEventListener('change', (e) => {
-                const f = e.target.files && e.target.files[0];
-                if (f) openProjectFromFile(f);
-                e.target.value = ''; // allow reopening the same file
+                const f = e.target.files && e.target.files[0]; if (f) openProjectFromFile(f); e.target.value = '';
             });
             document.getElementById('export-html-btn').addEventListener('click', exportSelfContainedHtml);
 
@@ -889,17 +673,13 @@ super"></textarea>
 
             // Legend modal wiring
             document.getElementById('legend-btn').addEventListener('click', () => {
-                const m = document.getElementById('legend-modal');
-                m.style.display = 'flex';
+                document.getElementById('legend-modal').style.display = 'flex';
             });
             document.getElementById('legend-close').addEventListener('click', () => {
-                const m = document.getElementById('legend-modal');
-                m.style.display = 'none';
+                document.getElementById('legend-modal').style.display = 'none';
             });
             document.getElementById('legend-modal').addEventListener('click', (e) => {
-                if (e.target.id === 'legend-modal') {
-                    e.currentTarget.style.display = 'none';
-                }
+                if (e.target.id === 'legend-modal') e.currentTarget.style.display = 'none';
             });
 
             canvas.addEventListener('mousedown', handleDown);
@@ -913,7 +693,7 @@ super"></textarea>
 
             window.addEventListener('keydown', handleKeyDown);
 
-            wordInput.value = "un- pack -ing\n|syl |la |ble\nsuper";
+            wordInput.value = "un- pack -ing\n|syl |la |ble\nuphill\nup|hill\nup\\hill\nup[h]ill\nbag -s\nwish -es";
 
             window.addEventListener('resize', resizeAndDraw);
             resizeAndDraw();
@@ -921,5 +701,3 @@ super"></textarea>
     </script>
 </body>
 </html>
-
-
