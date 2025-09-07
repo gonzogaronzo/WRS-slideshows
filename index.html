@@ -339,7 +339,7 @@ wish -es"></textarea>
             context.font = `bold ${fontSize * (tile.scale || 1)}px "Noto Sans", sans-serif`;
             context.textAlign = 'center'; context.textBaseline = 'middle';
             const cx = tile.x + tile.width / 2, cy = tile.y + tile.height / 2;
-            context.save(); context.translate(cx, cy); context.scale(1.2, 1.1); context.fillText(tile.text, 0, 0); context.restore();
+            context.save(); context.translate(cx, cy); context.fillText(tile.text, 0, 0); context.restore();
         }
 
         function drawLines(context, linesToDraw) {
