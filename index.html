@@ -277,7 +277,8 @@ wish -es"></textarea>
       if(tile.type==='prefix'||tile.type==='suffix') fontSize = 36;
       else if(tile.type==='syllable') fontSize = 48;
 
-      context.font = `bold ${fontSize * (tile.scale||1)}px "Noto Sans", sans-serif`;
+      context.font = `${Math.round(fontSize * (tile.scale || 1))}px "Noto Sans", sans-serif`;
+context.font = "bold " + context.font;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
 
