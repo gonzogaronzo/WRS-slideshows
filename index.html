@@ -1,593 +1,1183 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
   <title>Wilson Tile Generator & Slideshow</title>
+
   <style>
+
     html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden}
+
     body{
+
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+
       background:#111827;color:#D1D5DB;display:flex;flex-direction:column;align-items:center;
+
       padding:16px;box-sizing:border-box;text-align:center
+
     }
+
     .ui-container{
+
       width:100%;max-width:800px;background:#1F2937;padding:16px;border-radius:12px;margin-bottom:16px;
+
       box-shadow:0 4px 12px rgba(0,0,0,.2);flex-shrink:0;transition:all .3s ease
+
     }
+
     textarea{
+
       width:100%;height:110px;padding:12px;font-family:monospace;font-size:1rem;background:#374151;
+
       border:1px solid #4B5563;border-radius:6px;color:#F9FAFB;box-sizing:border-box;resize:vertical;margin-bottom:12px
+
     }
+
     .button-group{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
     button{
+
       padding:10px 20px;font-size:.9rem;font-weight:700;color:#F9FAFB;background:#4B5563;border:none;border-radius:6px;
+
       cursor:pointer;transition:background-color .2s ease-in-out
+
     }
+
     button:hover{background:#6B7280}
+
     canvas{background:#1F2937;border:2px dashed #4B5563;border-radius:12px;width:100%;height:100%;cursor:grab;touch-action:none}
+
     .hidden{display:none!important}
+
     body.presentation-mode .ui-container{padding:8px;margin-bottom:8px}
+
     body.presentation-mode .ui-container h1,
+
     body.presentation-mode .ui-container p,
+
     body.presentation-mode .ui-container textarea,
+
     body.presentation-mode .ui-container #generate-btn,
+
     body.presentation-mode .ui-container #start-slideshow-btn{display:none}
+
     body.presentation-mode #tileCanvas{border:none;border-radius:0}
+
     #presentation-overlay{position:fixed;inset:0;z-index:10;pointer-events:none}
+
     #presentation-overlay button{
+
       pointer-events:auto;position:absolute;top:50%;transform:translateY(-50%);font-size:2rem;background:rgba(0,0,0,.4);
+
       border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;border:1px solid #6B7280
+
     }
+
     #prev-slide-btn{left:20px}
+
     #next-slide-btn{right:20px}
+
     #exit-slideshow-btn{
+
       position:absolute;bottom:20px;right:20px;top:auto!important;left:auto!important;transform:none!important;
+
       width:44px;height:44px;font-size:1.5rem;border-radius:50%;padding:0;line-height:1;z-index:11
+
     }
+
     /* Legend modal */
+
     #legend-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:20}
+
     #legend-card{
+
       background:#1F2937;color:#E5E7EB;width:min(720px,92vw);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+
       padding:20px;text-align:left;border:1px solid #374151
+
     }
+
     #legend-card h2{margin:0 0 8px;color:#F9FAFB}
+
     #legend-card code{background:#111827;padding:2px 6px;border-radius:6px}
+
     #legend-close{float:right;background:#374151;border:1px solid #4B5563;border-radius:6px;padding:6px 10px;cursor:pointer}
+
     #legend-list{margin:12px 0 0;line-height:1.6}
+
   </style>
+
 </head>
+
 <body>
+
   <div class="ui-container">
+
     <h1>Wilson Tile Generator</h1>
+
     <p>
+
       Use hyphens for affixes (<code>un-</code>, <code>-ing</code>). Use <code>|</code> inside a word to mark syllable bars and block digraphs (<code>up|hill</code>).
+
       Use backslash to escape the next letter (<code>up\hill</code>). Use brackets to force literal letters (<code>up[h]ill</code>).
+
       Use <code>|syl</code> as a standalone syllable label tile.
+
     </p>
+
     <textarea id="word-input" placeholder="Examples:
+
 un- pack -ing
+
 |syl |la |ble
+
 uphill
+
 up|hill
+
 up\hill
+
 up[h]ill
+
 bag -s
+
 wish -es"></textarea>
+
     <div class="button-group">
+
       <button id="generate-btn">Generate Tiles</button>
+
       <button id="draw-mode-btn">Toggle Draw</button>
+
       <button id="clear-drawings-btn">Clear Drawings</button>
+
       <button id="start-slideshow-btn">Start Slideshow</button>
+
       <button id="download-all-btn">Download All PNGs</button>
+
       <button id="save-project-btn">Save Show (.wrs.json)</button>
+
       <button id="open-project-btn">Open Show</button>
+
       <button id="export-html-btn">Export Self-Contained HTML</button>
+
       <button id="legend-btn">Overrides Legend</button>
+
       <input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none"/>
+
     </div>
+
   </div>
+
+
 
   <canvas id="tileCanvas"></canvas>
 
+
+
   <div id="presentation-overlay" class="hidden">
+
     <button id="prev-slide-btn">&#8249;</button>
+
     <button id="next-slide-btn">&#8250;</button>
+
     <button id="exit-slideshow-btn">&times;</button>
+
   </div>
+
+
 
   <div id="legend-modal" role="dialog" aria-modal="true" aria-labelledby="legend-title">
+
     <div id="legend-card">
+
       <button id="legend-close" aria-label="Close legend">Close</button>
+
       <h2 id="legend-title">Overrides &amp; Formatting Legend</h2>
+
       <div id="legend-list">
+
         <p><strong>Digraph overrides (to stop wrong digraphs):</strong></p>
+
         <ul>
+
           <li><code>up|hill</code> → <em>|</em> splits syllables and blocks digraphs across the bar</li>
+
           <li><code>up\hill</code> → <em>\</em> escapes the next letter (prevents <code>ph</code>)</li>
+
           <li><code>up[h]ill</code> → letters inside <code>[ ]</code> are literal (no digraphing)</li>
+
         </ul>
+
         <p><strong>Force a tile’s type:</strong> <code>[text:type]</code></p>
+
         <ul>
+
           <li><code>[ph:digraph]</code> → force digraph</li>
+
           <li><code>[y:vowel]</code> → treat “y” as a vowel</li>
+
           <li><code>[ed:suffix]</code> → suffix tile</li>
+
           <li><code>[ar:r_controlled]</code> → r-controlled vowel</li>
+
           <li><code>[ank:welded]</code> → welded sound</li>
+
         </ul>
+
         <p><strong>Single-tile override (no type):</strong> <code>[ank]</code></p>
+
         <p><strong>Affixes:</strong> prefix <code>re-</code> · suffix <code>-ing</code></p>
+
         <p><strong>Syllable label:</strong> <code>|syl</code></p>
+
         <p><strong>Built-in types:</strong> <code>consonant, vowel, digraph, trigraph, welded, r_controlled, vowel_team, prefix, suffix, syllable</code></p>
+
       </div>
+
     </div>
+
   </div>
 
+
+
   <script>
+
     // ---------- SETUP ----------
+
     const canvas = document.getElementById('tileCanvas');
+
     const ctx = canvas.getContext('2d');
+
     const wordInput = document.getElementById('word-input');
+
     const presentationOverlay = document.getElementById('presentation-overlay');
 
+
+
     // ---------- CONFIG ----------
+
     const TILE_COLORS = {
+
       consonant:'#FFFFF0', vowel:'#FDD8B5', digraph:'#FFFFF0',
+
       trigraph:'#FFFFF0', welded:'#059669', r_controlled:'#FDD8B5',
+
       vowel_team:'#FDD8B5', prefix:'#FBBF24', suffix:'#FBBF24',
+
       syllable:'#9CA3AF', default:'#888888', text:'#333333'
+
     };
+
+
 
     const config = {
+
       lexicon:{
+
         prefixes:["un","dis","in","im","il","ir","mis","non","de","pre","re","sub","super","trans","inter","mid","fore","uni","bi","tri"],
+
         suffixes:["s","es","er","or","ness","ment","tion","sion","ist","ing","ed","en","ize","ful","less","able","ible","y","ly","ous","ish","est"],
+
         digraphs:["sh","ch","th","wh","ck","ph"],
+
         trigraphs:["tch","dge"],
+
         r_controlled:["ar","or","er","ir","ur"],
+
         welded:["all","am","an","ang","ing","ong","ung","ank","ink","onk","unk"],
+
         vowel_team:["ai","ay","ea","ee","ey","ie","oi","oy","oa","oe","oo","ow","ou","ue","ui","ew","au","aw"],
+
         vowels:["a","e","i","o","u"]
+
       }
+
     };
 
+
+
     let tiles = [];
+
     let isDragging = false, selectedTile = null, offsetX = 0, offsetY = 0;
+
     let isDrawModeActive = false, isCurrentlyDrawing = false;
+
     let editorLines = [];
+
     let presentationDrawings = {};  // per-slide drawings
+
     let isInPresentationMode = false;
+
     let presentationWords = [];
+
     let currentSlideIndex = 0;
 
+
+
     // ---------- VIEW GENERATION ----------
+
     function generateEditorView(){
+
       const words = wordInput.value.split(/[\n,]/).map(w=>w.trim()).filter(Boolean);
+
       tiles = [];
+
       let currentY = 20;
+
       const PADDING = 20, GAP = 14;
+
       const W = 112, H = 96, WA = Math.round(W*1.6), HA = Math.round(H*1.25), WS = Math.round(W*2.2), HS = Math.round(H*2);
 
+
+
       words.forEach(word=>{
+
         const g = tokenizeGraphemes(word);
+
         let totalWidth = 0;
+
         g.forEach((t,i)=>{
+
           let w=W; if(t.type==='prefix'||t.type==='suffix') w=WA; else if(t.type==='syllable') w=WS;
+
           totalWidth += w + (i<g.length-1?GAP:0);
+
         });
+
         const available = Math.max(0, canvas.width - (PADDING*2));
+
         const scale = Math.min(1, available/totalWidth);
 
+
+
         const maxH = g.reduce((m,t)=>{
+
           let h=H; if(t.type==='prefix'||t.type==='suffix') h=HA; else if(t.type==='syllable') h=HS;
+
           return Math.max(m,h);
+
         },H) * scale;
 
+
+
         let x = PADDING;
+
         g.forEach(t=>{
+
           let w=W, h=H;
+
           if(t.type==='prefix'||t.type==='suffix'){ w=WA; h=HA; }
+
           else if(t.type==='syllable'){ w=WS; h=HS; }
+
           tiles.push({
+
             ...t,
+
             x, y: currentY + (maxH - h*scale)/2,
+
             width: w*scale, height: h*scale, scale
+
           });
+
           x += w*scale + GAP;
+
         });
+
+
 
         currentY += maxH + GAP;
+
       });
 
+
+
       render();
+
     }
+
+
 
     // ---------- SLIDESHOW ----------
+
     function startSlideshow(){
+
       presentationWords = wordInput.value.split(/[\n,]/).map(w=>w.trim()).filter(Boolean);
+
       if(!presentationWords.length){ alert("Please enter some words to start the slideshow."); return; }
+
       isInPresentationMode = true;
+
       presentationDrawings = {};
+
       currentSlideIndex = 0;
+
       document.body.classList.add('presentation-mode');
+
       presentationOverlay.classList.remove('hidden');
+
       drawCurrentSlide();
+
     }
+
     function exitSlideshow(){
+
       isInPresentationMode = false;
+
       if(isDrawModeActive) toggleDrawMode();
+
       document.body.classList.remove('presentation-mode');
+
       presentationOverlay.classList.add('hidden');
+
       generateEditorView();
+
     }
+
     function nextSlide(){ if(currentSlideIndex < presentationWords.length-1){ currentSlideIndex++; drawCurrentSlide(); } }
+
     function prevSlide(){ if(currentSlideIndex > 0){ currentSlideIndex--; drawCurrentSlide(); } }
 
+
+
     function drawCurrentSlide(){
+
       const word = presentationWords[currentSlideIndex];
+
       const g = tokenizeGraphemes(word);
+
       tiles = [];
+
       const GAP=14, PADDING=20;
+
       const W=112, H=96, WA=Math.round(W*1.6), HA=Math.round(H*1.25), WS=Math.round(W*2.2), HS=Math.round(H*2);
 
+
+
       let totalWidth=0;
+
       g.forEach((t,i)=>{
+
         let w=W; if(t.type==='prefix'||t.type==='suffix') w=WA; else if(t.type==='syllable') w=WS;
+
         totalWidth += w + (i<g.length-1?GAP:0);
+
       });
+
       const available = Math.max(0, canvas.width - (PADDING*2));
+
       const scale = Math.min(1, available/totalWidth);
 
+
+
       const maxH = g.reduce((m,t)=>{
+
         let h=H; if(t.type==='prefix'||t.type==='suffix') h=HA; else if(t.type==='syllable') h=HS;
+
         return Math.max(m,h);
+
       },H)*scale;
 
+
+
       let x = (canvas.width - (totalWidth*scale))/2;
+
       const y = (canvas.height - maxH)/2;
 
+
+
       g.forEach(t=>{
+
         let w=W, h=H;
+
         if(t.type==='prefix'||t.type==='suffix'){ w=WA; h=HA; }
+
         else if(t.type==='syllable'){ w=WS; h=HS; }
+
         tiles.push({
+
           ...t,
+
           x, y: y + (maxH - h*scale)/2,
+
           width: w*scale, height: h*scale, scale
+
         });
+
         x += w*scale + GAP;
+
       });
+
+
 
       render();
+
     }
+
+
 
     // ---------- DRAWING ----------
+
     function drawTile(tile, context){
+
       const bg = TILE_COLORS[tile.type] || TILE_COLORS.default;
+
       const r = 8*(tile.scale||1);
+
       context.fillStyle = bg;
+
       context.beginPath(); context.roundRect(tile.x,tile.y,tile.width,tile.height,[r]); context.fill();
+
       context.lineWidth = 2*(tile.scale||1);
+
       context.strokeStyle = (tile===selectedTile && !isInPresentationMode) ? '#38BDF8' : '#000';
+
       context.beginPath(); context.roundRect(tile.x,tile.y,tile.width,tile.height,[r]); context.stroke();
 
+
+
       // TEXT — natural proportions (no scale warping)
+
       context.fillStyle = TILE_COLORS.text;
+
       let fontSize = 28;
+
       if(tile.type==='prefix'||tile.type==='suffix') fontSize = 36;
+
       else if(tile.type==='syllable') fontSize = 48;
 
+
+
       context.font = `${Math.round(fontSize * (tile.scale || 1))}px "Noto Sans", sans-serif`;
+
 context.font = "bold " + context.font;
+
       context.textAlign = 'center';
+
       context.textBaseline = 'middle';
 
+
+
       const cx = tile.x + tile.width/2;
+
       const cy = tile.y + tile.height/2;
 
+
+
       context.save();
+
       context.translate(cx, cy);
-      // FIX: Add context.scale() to prevent text stretching.
-      context.scale(tile.scale, tile.scale);
+
+      // NOTE: no context.scale(...) here — keeps preview and slideshow identical
+
       context.fillText(tile.text, 0, 0);
+
       context.restore();
+
     }
+
+
 
     function drawLines(context, lines){
+
       if(!lines) return;
+
       context.strokeStyle = '#F87171'; context.lineWidth = 3; context.lineCap='round'; context.lineJoin='round';
+
       lines.forEach(line=>{
+
         if(line.length<2) return;
+
         context.beginPath();
+
         context.moveTo(line[0].x, line[0].y);
+
         for(let i=1;i<line.length;i++) context.lineTo(line[i].x, line[i].y);
+
         context.stroke();
+
       });
+
     }
+
+
 
     function render(){
+
       ctx.clearRect(0,0,canvas.width,canvas.height);
+
       for(const t of tiles) drawTile(t, ctx);
+
       drawLines(ctx, isInPresentationMode ? presentationDrawings[currentSlideIndex] : editorLines);
+
     }
+
+
 
     // ---------- EVENTS ----------
+
     function getEventPos(e){
+
       const rect = canvas.getBoundingClientRect();
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
       const mouseX = clientX - rect.left, mouseY = clientY - rect.top;
+
       const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+
       return { x: mouseX*scaleX, y: mouseY*scaleY };
+
     }
+
+
 
     function handleDown(e){
+
       e.preventDefault();
+
       const {x,y} = getEventPos(e);
+
       if(isDrawModeActive){
+
         isCurrentlyDrawing = true;
+
         const bucket = isInPresentationMode ? (presentationDrawings[currentSlideIndex] ||= []) : editorLines;
+
         bucket.push([{x,y}]); return;
+
       }
+
       if(isInPresentationMode) return;
+
       for(let i=tiles.length-1;i>=0;i--){
+
         const t = tiles[i];
+
         if(x>t.x && x<t.x+t.width && y>t.y && y<t.y+t.height){
+
           selectedTile=t; isDragging=true; canvas.style.cursor='grabbing';
+
           offsetX=x-t.x; offsetY=y-t.y;
+
           tiles.push(tiles.splice(i,1)[0]); render(); return;
+
         }
+
       }
+
     }
+
     function handleMove(e){
+
       e.preventDefault();
+
       const {x,y} = getEventPos(e);
+
       if(isDrawModeActive && isCurrentlyDrawing){
+
         const bucket = isInPresentationMode ? presentationDrawings[currentSlideIndex] : editorLines;
+
         bucket[bucket.length-1].push({x,y}); render(); return;
+
       }
+
       if(isDragging){ selectedTile.x=x-offsetX; selectedTile.y=y-offsetY; render(); }
+
     }
+
     function handleUp(e){
+
       e.preventDefault(); isCurrentlyDrawing=false;
+
       if(isDragging){ canvas.style.cursor='grab'; isDragging=false; selectedTile=null; render(); }
+
     }
+
+
 
     function toggleDrawMode(){
+
       isDrawModeActive = !isDrawModeActive;
+
       const b = document.getElementById('draw-mode-btn');
+
       if(isDrawModeActive){ b.style.background='#059669'; b.textContent='Draw Mode: ON'; canvas.style.cursor='crosshair'; }
+
       else { b.style.background='#4B5563'; b.textContent='Toggle Draw'; canvas.style.cursor = isInPresentationMode ? 'default' : 'grab'; }
+
     }
+
     function clearDrawings(){ if(isInPresentationMode) presentationDrawings[currentSlideIndex]=[]; else editorLines=[]; render(); }
+
     function handleKeyDown(e){
+
       if(!isInPresentationMode) return;
+
       if(e.key==='ArrowRight') nextSlide();
+
       else if(e.key==='ArrowLeft') prevSlide();
+
       else if(e.key==='Escape') exitSlideshow();
+
     }
+
+
 
     // ---------- EXPORT HELPERS ----------
+
     function generateImageForWord(word){
+
       return new Promise(resolve=>{
+
         const temp = document.createElement('canvas');
+
         const tctx = temp.getContext('2d');
+
         const PADDING=20, GAP=14;
+
         const W=112, H=96, WA=Math.round(W*1.6), HA=Math.round(H*1.25), WS=Math.round(W*2.2), HS=Math.round(H*2);
 
+
+
         const g = tokenizeGraphemes(word);
+
         let total=0, maxH=H;
+
         g.forEach((t,i)=>{
+
           let w=W,h=H; if(t.type==='prefix'||t.type==='suffix'){w=WA;h=HA;} else if(t.type==='syllable'){w=WS;h=HS;}
+
           total+=w+(i<g.length-1?GAP:0); maxH=Math.max(maxH,h);
+
         });
+
+
 
         const dpr=2;
+
         temp.width=(total+PADDING*2)*dpr; temp.height=(maxH+PADDING*2)*dpr; tctx.setTransform(dpr,0,0,dpr,0,0);
+
         tctx.fillStyle='#1F2937'; tctx.fillRect(0,0,temp.width,temp.height);
 
+
+
         let x=PADDING;
+
         g.forEach(t=>{
+
           let w=W,h=H; if(t.type==='prefix'||t.type==='suffix'){w=WA;h=HA;} else if(t.type==='syllable'){w=WS;h=HS;}
+
           const tile={...t,x,y:PADDING+(maxH-h)/2,width:w,height:h,scale:1};
+
           drawTile(tile,tctx);
+
           x+=w+GAP;
+
         });
+
         temp.toBlob(b=>resolve(b),'image/png');
+
       });
+
     }
+
+
 
     async function downloadAllPNGs(){
+
       const words = wordInput.value.split(/[\n,]/).map(w=>w.trim()).filter(Boolean);
+
       if(!words.length){ alert('Add some words first.'); return; }
+
       for(const w of words){
+
         const blob = await generateImageForWord(w);
+
         const a=document.createElement('a');
+
         const safe=w.toLowerCase().trim().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
+
         a.href=URL.createObjectURL(blob); a.download=`${safe||'slide'}.png`;
+
         document.body.appendChild(a); a.click(); a.remove();
+
       }
+
     }
+
+
 
     // ---------- PROJECT SAVE/OPEN ----------
+
     function getWordsArray(){ return wordInput.value.split(/[\n,]/).map(w=>w.trim()).filter(Boolean); }
+
     function getProjectData(){ return {version:1,title:document.title||'Wilson Tiles Show',words:getWordsArray(),drawings:presentationDrawings}; }
+
     function loadProject(obj){
+
       if(!obj || !Array.isArray(obj.words)){ alert('Invalid project file.'); return; }
+
       wordInput.value = obj.words.join('\n');
+
       presentationDrawings = obj.drawings && typeof obj.drawings==='object' ? obj.drawings : {};
+
       currentSlideIndex=0;
+
       if(isInPresentationMode) drawCurrentSlide(); else generateEditorView();
+
     }
+
     function saveProject(){
+
       const data=getProjectData();
+
       const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+
       const a=document.createElement('a');
+
       const safe=(data.title||'wilson_show').toLowerCase().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
+
       a.href=URL.createObjectURL(blob); a.download=`${safe||'wilson_show'}.wrs.json`; a.click();
+
     }
+
     function openProjectFromFile(file){
+
       const r=new FileReader();
+
       r.onload=()=>{ try{ loadProject(JSON.parse(r.result)); } catch{ alert('Could not read project file.'); } };
+
       r.readAsText(file);
+
     }
+
+
 
     // ---------- EXPORT SELF-CONTAINED HTML ----------
+
     function exportSelfContainedHtml(){
+
       const data=getProjectData();
+
       const css=document.querySelector('style').textContent;
+
       const mainScript=[...document.querySelectorAll('script')].map(s=>s.textContent).join('\n\n');
+
       const savedTag=`<script>window.SAVED_SHOW=${JSON.stringify(data)};<\\/script>`;
+
       const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${(data.title||'Wilson Tile Generator & Slideshow').replace(/</g,'&lt;')}</title><style>${css}</style></head><body>
+
 <div class="ui-container"><h1>Wilson Tile Generator</h1>
+
 <p>Use hyphens for affixes (un-, -ing). Use | inside a word to mark syllable bars and block digraphs (up|hill). Use \\ to escape the next letter (up\\hill). Use [ ] to force literal letters (up[h]ill). Use |syl as a standalone syllable label tile.</p>
+
 <textarea id="word-input"></textarea>
+
 <div class="button-group">
+
 <button id="generate-btn">Generate Tiles</button><button id="draw-mode-btn">Toggle Draw</button><button id="clear-drawings-btn">Clear Drawings</button><button id="start-slideshow-btn">Start Slideshow</button><button id="download-all-btn">Download All PNGs</button><button id="save-project-btn">Save Show (.wrs.json)</button><button id="open-project-btn">Open Show</button><button id="export-html-btn">Export Self-Contained HTML</button>
+
 <input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none"></div></div>
+
 <canvas id="tileCanvas"></canvas>
+
 <div id="presentation-overlay" class="hidden"><button id="prev-slide-btn">&#8249;</button><button id="next-slide-btn">&#8250;</button><button id="exit-slideshow-btn">&times;</button></div>
+
 ${savedTag}
+
 <script>${mainScript}<\\/script>
+
 <script>(function(){if(window.SAVED_SHOW){const d=window.SAVED_SHOW;document.addEventListener('DOMContentLoaded',function(){const ta=document.getElementById('word-input');if(ta&&Array.isArray(d.words)) ta.value=d.words.join('\\n'); if(typeof loadProject==='function'){loadProject(d);}});}})();<\/script>
+
 </body></html>`;
+
       const blob=new Blob([html],{type:'text/html'});
+
       const a=document.createElement('a');
+
       const safe=(data.title||'wilson_show').toLowerCase().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
+
       a.href=URL.createObjectURL(blob); a.download=`${safe||'wilson_show'}.wrs.html`; a.click();
+
     }
 
+
+
     // ---------- TOKENIZER with overrides |, \, [ ... ] ----------
+
     function tokenizeGraphemes(word){
+
       const finalTokens=[];
+
       const parts=String(word).split(/\s+/).filter(p=>p.length>0);
 
+
+
       const patterns=[
+
         ...config.lexicon.welded,
+
         ...config.lexicon.trigraphs,
+
         ...config.lexicon.digraphs,
+
         ...config.lexicon.vowel_team,
+
         ...config.lexicon.r_controlled,
+
         ...config.lexicon.vowels
+
       ].sort((a,b)=>b.length-a.length);
+
+
 
       function pushCharAsTile(ch){ finalTokens.push({text:ch,type:getGraphemeType(ch),forced:true}); }
 
+
+
       function scanSegment(seg){
+
         const letters=[...seg];
+
         for(let i=0;i<letters.length;i++){
+
           let ch=letters[i];
 
+
+
           // Escape: \x => literal x (no digraph)
+
           if(ch==='\\' && i+1<letters.length){ pushCharAsTile(letters[++i]); continue; }
 
+
+
           // Bracket literal: [ ... ] => emit each char literally
+
           if(ch==='['){
+
             let j=i+1, buf="";
+
             while(j<letters.length && letters[j]!==']') buf+=letters[j++];
+
             if(j<letters.length && letters[j]===']'){ for(const c of buf) pushCharAsTile(c); i=j; continue; }
+
           }
+
+
 
           // Normal pattern match within this segment
+
           let matched=false;
+
           const remainder=letters.slice(i).join('').toLowerCase();
+
           for(const pat of patterns){
+
             if(remainder.startsWith(pat)){
+
               const raw=letters.slice(i,i+pat.length).join('');
+
               finalTokens.push({text:raw,type:getGraphemeType(pat)});
+
               i+=pat.length-1; matched=true; break;
+
             }
+
           }
+
           if(!matched) pushCharAsTile(ch);
+
         }
+
       }
+
+
 
       parts.forEach(part=>{
+
         if(part.startsWith('|') && part.length>1){
+
           finalTokens.push({text:part.substring(1),type:'syllable'});
+
         } else if(part.startsWith('-') && part.length>1){
+
           finalTokens.push({text:part,type:'suffix'});
+
         } else if(part.endsWith('-') && part.length>1){
+
           finalTokens.push({text:part,type:'prefix'});
+
         } else {
+
           // in-word syllable bars block digraphs
+
           const segments = part.split('|');
+
           segments.forEach(seg=>{ if(seg) scanSegment(seg); });
+
           adjustYTypes(finalTokens);
+
         }
+
       });
 
+
+
       return finalTokens;
+
     }
+
+
 
     function adjustYTypes(tokens){
+
       for(let i=0;i<tokens.length;i++){
+
         const t=tokens[i];
+
         if(t && !t.forced && typeof t.text==='string' && t.text.length===1 && t.text.toLowerCase()==='y'){
+
           const next=tokens[i+1];
+
           const nextText=next && typeof next.text==='string' ? next.text : '';
+
           const nextType=next ? next.type : '';
+
           const nextStartsWithVowel=/^[aeiou]/i.test(nextText);
+
           const nextIsVowelish=(nextType==='vowel'||nextType==='vowel_team'||nextType==='r_controlled'||nextStartsWithVowel);
+
           t.type = nextIsVowelish ? 'consonant' : 'vowel';
+
         }
+
       }
+
     }
+
+
 
     function getGraphemeType(g){
+
       const s=String(g).replace(/-/g,'').toLowerCase();
+
       if(config.lexicon.welded.includes(s)) return 'welded';
+
       if(config.lexicon.trigraphs.includes(s)) return 'trigraph';
+
       if(config.lexicon.digraphs.includes(s)) return 'digraph';
+
       if(config.lexicon.r_controlled.includes(s)) return 'r_controlled';
+
       if(config.lexicon.vowel_team.includes(s)) return 'vowel_team';
+
       if(config.lexicon.vowels.includes(s)) return 'vowel';
+
       return 'consonant';
+
     }
+
+
 
     // ---------- INIT ----------
+
     function resizeAndDraw(){
+
       canvas.width = canvas.clientWidth;
+
       canvas.height = canvas.clientHeight;
+
       if(isInPresentationMode) drawCurrentSlide(); else generateEditorView();
+
     }
 
+
+
     window.onload=function(){
+
       document.getElementById('generate-btn').addEventListener('click',generateEditorView);
+
       document.getElementById('draw-mode-btn').addEventListener('click',toggleDrawMode);
+
       document.getElementById('clear-drawings-btn').addEventListener('click',clearDrawings);
+
       document.getElementById('start-slideshow-btn').addEventListener('click',startSlideshow);
+
       document.getElementById('download-all-btn').addEventListener('click',downloadAllPNGs);
+
       document.getElementById('save-project-btn').addEventListener('click',saveProject);
+
       document.getElementById('open-project-btn').addEventListener('click',()=>document.getElementById('open-project-file').click());
+
       document.getElementById('open-project-file').addEventListener('change',(e)=>{ const f=e.target.files&&e.target.files[0]; if(f) openProjectFromFile(f); e.target.value=''; });
+
       document.getElementById('export-html-btn').addEventListener('click',exportSelfContainedHtml);
 
+
+
       document.getElementById('prev-slide-btn').addEventListener('click',prevSlide);
+
       document.getElementById('next-slide-btn').addEventListener('click',nextSlide);
+
       document.getElementById('exit-slideshow-btn').addEventListener('click',exitSlideshow);
 
+
+
       // Legend
+
       document.getElementById('legend-btn').addEventListener('click',()=>{ document.getElementById('legend-modal').style.display='flex'; });
+
       document.getElementById('legend-close').addEventListener('click',()=>{ document.getElementById('legend-modal').style.display='none'; });
+
       document.getElementById('legend-modal').addEventListener('click',(e)=>{ if(e.target.id==='legend-modal') e.currentTarget.style.display='none'; });
 
+
+
       canvas.addEventListener('mousedown',handleDown);
+
       canvas.addEventListener('mousemove',handleMove);
+
       canvas.addEventListener('mouseup',handleUp);
+
       canvas.addEventListener('mouseout',handleUp);
+
       canvas.addEventListener('touchstart',handleDown);
+
       canvas.addEventListener('touchmove',handleMove);
+
       canvas.addEventListener('touchend',handleUp);
+
       canvas.addEventListener('touchcancel',handleUp);
+
       window.addEventListener('keydown',handleKeyDown);
 
+
+
       // Starter text
+
       wordInput.value = "un- pack -ing\n|syl |la |ble\nuphill\nup|hill\nup\\hill\nup[h]ill\nbag -s\nwish -es";
 
+
+
       window.addEventListener('resize',resizeAndDraw);
+
       resizeAndDraw();
+
     };
+
   </script>
+
 </body>
+
 </html>
