@@ -547,17 +547,19 @@ ${savedTag}
         } else if(part.endsWith('-') && part.length>1){
           finalTokens.push({text:part,type:'prefix'});
         } else {
+          const before = finalTokens.length;
           const segments = part.split('|'); // in-word bars block digraphs
           segments.forEach(seg=>{ if(seg) scanSegment(seg); });
-          adjustYTypes(finalTokens);
+          adjustYTypes(finalTokens, before);
         }
       });
 
       return finalTokens;
     }
 
-    function adjustYTypes(tokens){
-      for(let i=0;i<tokens.length;i++){
+    function adjustYTypes(tokens, startIdx){
+      const start = Math.max(0, startIdx|0);
+      for(let i=start;i<tokens.length;i++){
         const t=tokens[i];
         if(t && !t.forced && typeof t.text==='string' && t.text.length===1 && t.text.toLowerCase()==='y'){
           const next=tokens[i+1];
