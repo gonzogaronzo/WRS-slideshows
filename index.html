@@ -335,8 +335,8 @@ wish -es"></textarea>
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       const mouseX = clientX - rect.left, mouseY = clientY - rect.top;
-      // Convert to drawing buffer coords
-      return { x: mouseX * DPR, y: mouseY * DPR };
+      // Coordinates already in CSS pixels; canvas transform handles DPR
+      return { x: mouseX, y: mouseY };
     }
 
     function handleDown(e){
