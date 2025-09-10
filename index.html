@@ -19,6 +19,9 @@
       width:100%;height:110px;padding:12px;font-family:monospace;font-size:1rem;background:#374151;
       border:1px solid #4B5563;border-radius:6px;color:#F9FAFB;box-sizing:border-box;resize:vertical;margin-bottom:12px
     }
+    select{
+      padding:8px 12px;font-size:.9rem;background:#374151;color:#F9FAFB;border:1px solid #4B5563;border-radius:6px;
+    }
     .button-group{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     button{
       padding:10px 16px;font-size:.9rem;font-weight:700;color:#F9FAFB;background:#4B5563;border:none;border-radius:6px;
@@ -62,6 +65,7 @@
       Hyphens for affixes (<code>re-</code>, <code>-ing</code>). Use <code>|</code> inside a word to bar syllables / block digraphs (<code>up|hill</code>).
       Backslash escapes next letter (<code>up\hill</code>). Brackets force literal letters (<code>up[h]ill</code>). Use <code>|syl</code> for a syllable label tile.
     </p>
+
     <textarea id="word-input" placeholder="Examples:
 un- pack -ing
 |syl |la |ble
@@ -71,17 +75,30 @@ up\hill
 up[h]ill
 bag -s
 wish -es"></textarea>
+
+    <!-- LocalStorage-backed Save/Load toolbar -->
+    <div class="button-group" id="storage-bar">
+      <label for="slideshow-select">Load Slideshow:</label>
+      <select id="slideshow-select">
+        <option value="">— Select —</option>
+      </select>
+      <button id="save-btn">Save</button>
+      <button id="save-as-btn">Save As…</button>
+      <button id="rename-btn">Rename</button>
+      <button id="delete-btn">Delete</button>
+      <button id="export-btn">Export</button>
+      <button id="import-btn">Import</button>
+      <input id="import-file" type="file" accept=".json,.wrs.json" style="display:none"/>
+    </div>
+
     <div class="button-group">
       <button id="generate-btn">Generate Tiles</button>
       <button id="draw-mode-btn">Toggle Draw</button>
       <button id="clear-drawings-btn">Clear Drawings</button>
       <button id="start-slideshow-btn">Start Slideshow</button>
       <button id="download-all-btn">Download All PNGs</button>
-      <button id="save-project-btn">Save Show (.wrs.json)</button>
-      <button id="open-project-btn">Open Show</button>
       <button id="export-html-btn">Export Self-Contained HTML</button>
       <button id="legend-btn">Overrides Legend</button>
-      <input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none"/>
     </div>
   </div>
 
@@ -154,11 +171,21 @@ wish -es"></textarea>
     let presentationWords = [];
     let currentSlideIndex = 0;
 
+    // Save/Load (localStorage) state
+    let dirty = false;
+    let currentTitle = null;
+    let repairNotified = false;
+    const STORAGE_PREFIX = 'wrs.slideshows.';
+    const INDEX_KEY = STORAGE_PREFIX + 'index';
+    const LAST_OPEN_KEY = STORAGE_PREFIX + 'lastOpenTitle';
+
     // ---------- LAYOUT HELPERS ----------
     const GAP = 14, PADDING = 20;
     const W  = 112, H  = 96;
     const WA = Math.round(W * 1.6),  HA = Math.round(H * 1.25); // affix
     const WS = Math.round(W * 2.2),  HS = Math.round(H * 2.0);  // syllable
+
+    function markDirty(){ dirty = true; }
 
     // ---------- VIEW GENERATION ----------
     function generateEditorView(){
@@ -284,13 +311,12 @@ wish -es"></textarea>
       }
       context.stroke();
 
-      // TEXT — proportional and crisp
+      // TEXT — proportional and crisp (scale the context, not the font)
       context.fillStyle = TILE_COLORS.text;
       let fontSize = 28;
       if(tile.type==='prefix'||tile.type==='suffix') fontSize = 36;
       else if(tile.type==='syllable') fontSize = 48;
 
-      // Set base face, then scale the context (not the font size)
       context.font = `bold ${fontSize}px "Noto Sans", sans-serif`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
@@ -300,7 +326,7 @@ wish -es"></textarea>
 
       context.save();
       context.translate(cx, cy);
-      context.scale(tile.scale || 1, tile.scale || 1); // <- fixes stretch
+      context.scale(tile.scale || 1, tile.scale || 1);
       context.fillText(tile.text, 0, 0);
       context.restore();
     }
@@ -334,9 +360,15 @@ wish -es"></textarea>
       const rect = canvas.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const mouseX = clientX - rect.left, mouseY = clientY - rect.top;
-      // Coordinates already in CSS pixels; canvas transform handles DPR
-      return { x: mouseX, y: mouseY };
+      // Base CSS pixel coordinates
+      let x = clientX - rect.left;
+      let y = clientY - rect.top;
+      // Normalize if backing-store size != CSS size * DPR (prevents cursor/pen offset)
+      const dpr = DPR || window.devicePixelRatio || 1;
+      const sx = (canvas.width  / (rect.width  * dpr)) || 1;
+      const sy = (canvas.height / (rect.height * dpr)) || 1;
+      if (sx !== 1 || sy !== 1) { x *= sx; y *= sy; }
+      return { x, y };
     }
 
     function handleDown(e){
@@ -345,7 +377,7 @@ wish -es"></textarea>
       if(isDrawModeActive){
         isCurrentlyDrawing = true;
         const bucket = isInPresentationMode ? (presentationDrawings[currentSlideIndex] ||= []) : editorLines;
-        bucket.push([{x,y}]); return;
+        bucket.push([{x,y}]); markDirty(); return;
       }
       if(isInPresentationMode) return;
       for(let i=tiles.length-1;i>=0;i--){
@@ -362,9 +394,9 @@ wish -es"></textarea>
       const {x,y} = getEventPos(e);
       if(isDrawModeActive && isCurrentlyDrawing){
         const bucket = isInPresentationMode ? presentationDrawings[currentSlideIndex] : editorLines;
-        bucket[bucket.length-1].push({x,y}); render(); return;
+        bucket[bucket.length-1].push({x,y}); markDirty(); render(); return;
       }
-      if(isDragging){ selectedTile.x=x-offsetX; selectedTile.y=y-offsetY; render(); }
+      if(isDragging){ selectedTile.x=x-offsetX; selectedTile.y=y-offsetY; markDirty(); render(); }
     }
     function handleUp(e){
       e.preventDefault(); isCurrentlyDrawing=false;
@@ -377,7 +409,12 @@ wish -es"></textarea>
       if(isDrawModeActive){ b.style.background='#059669'; b.textContent='Draw Mode: ON'; canvas.style.cursor='crosshair'; }
       else { b.style.background='#4B5563'; b.textContent='Toggle Draw'; canvas.style.cursor = isInPresentationMode ? 'default' : 'grab'; }
     }
-    function clearDrawings(){ if(isInPresentationMode) presentationDrawings[currentSlideIndex]=[]; else editorLines=[]; render(); }
+    function clearDrawings(){
+      if(isInPresentationMode) presentationDrawings[currentSlideIndex]=[];
+      else editorLines=[];
+      markDirty();
+      render();
+    }
     function handleKeyDown(e){
       if(!isInPresentationMode) return;
       if(e.key==='ArrowRight') nextSlide();
@@ -416,7 +453,7 @@ wish -es"></textarea>
         g.forEach(t=>{
           let w=W,h=H; if(t.type==='prefix'||t.type==='suffix'){w=WA;h=HA;} else if(t.type==='syllable'){w=WS;h=HS;}
           const tile={...t,x,y:PADDING+(maxRowHeight-h)/2,width:w,height:h,scale:1};
-          drawTile(tile,cx); // drawTile handles text scaling via context.scale(tile.scale)
+          drawTile(tile,cx);
           x += w + GAP;
         });
 
@@ -436,28 +473,129 @@ wish -es"></textarea>
       }
     }
 
-    // ---------- PROJECT SAVE/OPEN ----------
+    // ---------- SAVE/LOAD (LocalStorage) ----------
     function getWordsArray(){ return wordInput.value.split(/[\n,]/).map(w=>w.trim()).filter(Boolean); }
-    function getProjectData(){ return {version:1,title:document.title||'Wilson Tiles Show',words:getWordsArray(),drawings:presentationDrawings}; }
-    function loadProject(obj){
-      if(!obj || !Array.isArray(obj.words)){ alert('Invalid project file.'); return; }
-      wordInput.value = obj.words.join('\n');
-      presentationDrawings = obj.drawings && typeof obj.drawings==='object' ? obj.drawings : {};
+    function serializeState(){ return {words:getWordsArray(), drawings:presentationDrawings}; }
+    function hydrateState(payload){
+      if(!payload) return;
+      const words = payload.words || [];
+      wordInput.value = Array.isArray(words) ? words.join('\n') : '';
+      presentationDrawings = payload.drawings && typeof payload.drawings==='object' ? payload.drawings : {};
       currentSlideIndex=0;
       if(isInPresentationMode) drawCurrentSlide(); else generateEditorView();
+      dirty=false;
     }
-    function saveProject(){
-      const data=getProjectData();
-      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-      const a=document.createElement('a');
-      const safe=(data.title||'wilson_show').toLowerCase().replace(/[^\w-]+/g,'_').replace(/^_+|_+$/g,'');
-      a.href=URL.createObjectURL(blob); a.download=`${safe||'wilson_show'}.wrs.json`; a.click();
+    function encodeKey(title){ return STORAGE_PREFIX+encodeURIComponent(String(title).trim()); }
+    function upsertIndex(t){ localStorage.setItem(INDEX_KEY,JSON.stringify(t)); }
+    function listSavedTitles(){
+      let titles; try{ titles=JSON.parse(localStorage.getItem(INDEX_KEY)||'[]'); }catch{ titles=[]; }
+      if(!Array.isArray(titles)) titles=[];
+      const existing=titles.filter(t=>localStorage.getItem(encodeKey(t))!==null);
+      if(existing.length!==titles.length){
+        localStorage.setItem(INDEX_KEY,JSON.stringify(existing));
+        if(!repairNotified){ alert('Repaired slideshow list with missing entries.'); repairNotified=true; }
+      }
+      return existing.sort((a,b)=>a.localeCompare(b));
     }
-    function openProjectFromFile(file){
+    function getSaved(title){
+      try{ const raw=localStorage.getItem(encodeKey(title)); return raw?JSON.parse(raw):null; }catch{return null;}
+    }
+    function putSaved(record){
+      try{
+        localStorage.setItem(encodeKey(record.title),JSON.stringify(record));
+      }catch(e){
+        if(e && e.name==='QuotaExceededError'){
+          const approx=Math.round(JSON.stringify(record).length/1024);
+          alert(`Storage full. Could not save (~${approx} KB).`);
+        } else { alert('Could not save slideshow.'); }
+        return false;
+      }
+      return true;
+    }
+    function deleteSaved(title){ localStorage.removeItem(encodeKey(title)); }
+    function renameSaved(oldTitle,newTitle){ const rec=getSaved(oldTitle); if(!rec) return; deleteSaved(oldTitle); rec.title=newTitle; putSaved(rec); }
+
+    function refreshDropdown(){
+      const sel=document.getElementById('slideshow-select');
+      const titles=listSavedTitles();
+      sel.innerHTML='<option value="">— Select —</option>'+titles.map(t=>`<option value="${t}">${t}</option>`).join('');
+      if(currentTitle && titles.includes(currentTitle)) sel.value=currentTitle; else sel.value='';
+    }
+    function saveAsFlow(){
+      const input=prompt('Enter title for this slideshow:',''); if(!input) return;
+      const title=input.trim(); if(!title||title.length>80){ alert('Invalid title'); return; }
+      let titles=listSavedTitles();
+      if(titles.includes(title) && !confirm(`Overwrite existing '${title}'?`)) return;
+      const now=Date.now();
+      const existing=getSaved(title);
+      const record={title,createdAt:existing?existing.createdAt:now,updatedAt:now,version:1,payload:serializeState()};
+      if(!putSaved(record)) return;
+      if(!titles.includes(title)){ titles.push(title); upsertIndex(titles); }
+      currentTitle=title; dirty=false; localStorage.setItem(LAST_OPEN_KEY,currentTitle); refreshDropdown();
+    }
+    function saveCurrent(){
+      if(currentTitle){
+        const existing=getSaved(currentTitle); const now=Date.now();
+        const record={title:currentTitle,createdAt:existing?existing.createdAt:now,updatedAt:now,version:1,payload:serializeState()};
+        if(putSaved(record)){ dirty=false; localStorage.setItem(LAST_OPEN_KEY,currentTitle); refreshDropdown(); }
+      } else saveAsFlow();
+    }
+    function handleLoad(title){
+      if(!title) return;
+      if(dirty && !confirm('You have unsaved changes. Continue and discard changes?')){
+        document.getElementById('slideshow-select').value=currentTitle||''; return;
+      }
+      const rec=getSaved(title); if(!rec){ alert('Could not load slideshow.'); refreshDropdown(); return; }
+      hydrateState(rec.payload); currentTitle=rec.title; dirty=false; localStorage.setItem(LAST_OPEN_KEY,currentTitle); refreshDropdown();
+    }
+    function renameCurrent(){
+      if(!currentTitle){ alert('No slideshow loaded.'); return; }
+      const input=prompt('Rename slideshow:',currentTitle); if(!input) return;
+      const title=input.trim(); if(!title||title.length>80){ alert('Invalid title'); return; }
+      const titles=listSavedTitles(); if(titles.includes(title)){ alert('Title already exists.'); return; }
+      renameSaved(currentTitle,title);
+      const newTitles=titles.filter(t=>t!==currentTitle); newTitles.push(title); upsertIndex(newTitles);
+      currentTitle=title; localStorage.setItem(LAST_OPEN_KEY,currentTitle); refreshDropdown();
+    }
+    function deleteCurrent(){
+      const sel=document.getElementById('slideshow-select'); const title=sel.value;
+      if(!title){ alert('No slideshow selected.'); return; }
+      if(!confirm(`Delete '${title}'?`)) return;
+      deleteSaved(title);
+      const titles=listSavedTitles().filter(t=>t!==title); upsertIndex(titles);
+      if(currentTitle===title){ currentTitle=null; dirty=true; localStorage.removeItem(LAST_OPEN_KEY); }
+      refreshDropdown();
+    }
+    function exportSelected(){
+      const sel=document.getElementById('slideshow-select'); const title=sel.value;
+      if(!title){ alert('Select a slideshow to export.'); return; }
+      const rec=getSaved(title); if(!rec){ alert('Could not export.'); return; }
+      const blob=new Blob([JSON.stringify(rec,null,2)],{type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${title}.wrs.json`; a.click();
+    }
+    function importFromFile(file){
       const r=new FileReader();
-      r.onload=()=>{ try{ loadProject(JSON.parse(r.result)); } catch{ alert('Could not read project file.'); } };
+      r.onload=()=>{
+        try{
+          const rec=JSON.parse(r.result);
+          if(!rec||!rec.title||!rec.payload){ alert('Invalid file.'); return; }
+          let title=String(rec.title).trim();
+          const titles=listSavedTitles();
+          if(titles.includes(title)){
+            if(!confirm(`Overwrite existing '${title}'?`)){
+              const nt=prompt('Enter new title:',`${title} (import)`); if(!nt) return; title=nt.trim();
+            }
+          }
+          rec.title=title; rec.createdAt=rec.createdAt||Date.now(); rec.updatedAt=Date.now(); rec.version=1;
+          if(!putSaved(rec)) return;
+          if(!titles.includes(title)){ titles.push(title); upsertIndex(titles); }
+          refreshDropdown(); dirty=false;
+        }catch{ alert('Could not read file.'); }
+      };
       r.readAsText(file);
     }
+
+    function getProjectData(){ return {version:1,title:currentTitle||'Wilson Tiles Show',...serializeState()}; }
 
     // ---------- EXPORT SELF-CONTAINED HTML ----------
     function exportSelfContainedHtml(){
@@ -469,14 +607,13 @@ wish -es"></textarea>
 <div class="ui-container"><h1>Wilson Tile Generator</h1>
 <p>Hyphens for affixes (re-, -ing). Use | to bar syllables (up|hill). Use \\ to escape (up\\hill). Use [ ] for literals (up[h]ill). Use |syl for a label.</p>
 <textarea id="word-input"></textarea>
-<div class="button-group">
-<button id="generate-btn">Generate Tiles</button><button id="draw-mode-btn">Toggle Draw</button><button id="clear-drawings-btn">Clear Drawings</button><button id="start-slideshow-btn">Start Slideshow</button><button id="download-all-btn">Download All PNGs</button><button id="save-project-btn">Save Show (.wrs.json)</button><button id="open-project-btn">Open Show</button><button id="export-html-btn">Export Self-Contained HTML</button>
-<input id="open-project-file" type="file" accept=".json,.wrs.json" style="display:none"></div></div>
+<div class="button-group" id="storage-bar"><label for="slideshow-select">Load Slideshow:</label><select id="slideshow-select"><option value="">— Select —</option></select><button id="save-btn">Save</button><button id="save-as-btn">Save As…</button><button id="rename-btn">Rename</button><button id="delete-btn">Delete</button><button id="export-btn">Export</button><button id="import-btn">Import</button><input id="import-file" type="file" accept=".json,.wrs.json" style="display:none"></div>
+<div class="button-group"><button id="generate-btn">Generate Tiles</button><button id="draw-mode-btn">Toggle Draw</button><button id="clear-drawings-btn">Clear Drawings</button><button id="start-slideshow-btn">Start Slideshow</button><button id="download-all-btn">Download All PNGs</button><button id="export-html-btn">Export Self-Contained HTML</button><button id="legend-btn">Overrides Legend</button></div></div>
 <canvas id="tileCanvas"></canvas>
 <div id="presentation-overlay" class="hidden"><button id="prev-slide-btn">&#8249;</button><button id="next-slide-btn">&#8250;</button><button id="exit-slideshow-btn">&times;</button></div>
 ${savedTag}
 <script>${mainScript}<\\/script>
-<script>(function(){if(window.SAVED_SHOW){const d=window.SAVED_SHOW;document.addEventListener('DOMContentLoaded',function(){const ta=document.getElementById('word-input');if(ta&&Array.isArray(d.words)) ta.value=d.words.join('\\n'); if(typeof loadProject==='function'){loadProject(d);}});}})();<\/script>
+<script>(function(){if(window.SAVED_SHOW){const d=window.SAVED_SHOW;document.addEventListener('DOMContentLoaded',function(){if(typeof hydrateState==='function'){hydrateState(d);}});}})();<\/script>
 </body></html>`;
       const blob=new Blob([html],{type:'text/html'});
       const a=document.createElement('a');
@@ -601,10 +738,17 @@ ${savedTag}
       document.getElementById('clear-drawings-btn').addEventListener('click',clearDrawings);
       document.getElementById('start-slideshow-btn').addEventListener('click',startSlideshow);
       document.getElementById('download-all-btn').addEventListener('click',downloadAllPNGs);
-      document.getElementById('save-project-btn').addEventListener('click',saveProject);
-      document.getElementById('open-project-btn').addEventListener('click',()=>document.getElementById('open-project-file').click());
-      document.getElementById('open-project-file').addEventListener('change',(e)=>{ const f=e.target.files&&e.target.files[0]; if(f) openProjectFromFile(f); e.target.value=''; });
       document.getElementById('export-html-btn').addEventListener('click',exportSelfContainedHtml);
+
+      // Storage bar
+      document.getElementById('save-btn').addEventListener('click',saveCurrent);
+      document.getElementById('save-as-btn').addEventListener('click',saveAsFlow);
+      document.getElementById('rename-btn').addEventListener('click',renameCurrent);
+      document.getElementById('delete-btn').addEventListener('click',deleteCurrent);
+      document.getElementById('export-btn').addEventListener('click',exportSelected);
+      document.getElementById('import-btn').addEventListener('click',()=>document.getElementById('import-file').click());
+      document.getElementById('import-file').addEventListener('change',(e)=>{ const f=e.target.files&&e.target.files[0]; if(f) importFromFile(f); e.target.value=''; });
+      document.getElementById('slideshow-select').addEventListener('change',(e)=>handleLoad(e.target.value));
 
       document.getElementById('prev-slide-btn').addEventListener('click',prevSlide);
       document.getElementById('next-slide-btn').addEventListener('click',nextSlide);
@@ -625,11 +769,25 @@ ${savedTag}
       canvas.addEventListener('touchcancel',handleUp);
       window.addEventListener('keydown',handleKeyDown);
 
-      // Starter text
-      wordInput.value = "un- pack -ing\n|syl |la |ble\nuphill\nup|hill\nup\\hill\nup[h]ill\nbag -s\nwish -es";
+      wordInput.addEventListener('input',markDirty);
 
       window.addEventListener('resize',resizeAndDraw);
       resizeAndDraw();
+
+      refreshDropdown();
+      const last=localStorage.getItem(LAST_OPEN_KEY);
+      if(last){ const rec=getSaved(last); if(rec){ hydrateState(rec.payload); currentTitle=rec.title; refreshDropdown(); } }
+      else {
+        wordInput.value = "un- pack -ing\n|syl |la |ble\nuphill\nup|hill\nup\\hill\nup[h]ill\nbag -s\nwish -es";
+        generateEditorView();
+      }
+
+      // Warn on tab close if there are unsaved changes
+      window.addEventListener('beforeunload', (e) => {
+        if (!dirty) return;
+        e.preventDefault();
+        e.returnValue = '';
+      });
     };
   </script>
 </body>
